@@ -77,6 +77,19 @@ activación, dedup, resiliencia a fallos de red), WhatsApp y Ushahidi
 | GET | `/api/v1/sitrep.csv?formato=hxl` | Export HXL para HDX / ONG internacionales |
 | WS | `/ws` | Feed de eventos en tiempo real |
 
+## Detección de posibles duplicados
+
+Un mismo hecho puede llegar reportado dos veces por canales distintos
+(alguien lo manda por WhatsApp, otra persona lo publica en Ushahidi). Cada
+reporte nuevo se compara contra reportes recientes de la misma categoría con
+`difflib` (fuzzy matching de texto, librería estándar de Python) — si la
+similitud pasa un umbral, queda marcado con `posible_duplicado_de_id`
+apuntando al original. **Deliberadamente no usa IA/LLM para esto**: es un
+problema clásico de similitud de texto, no de razonamiento, y un modelo de
+lenguaje acá sería más lento, más caro y menos auditable que un algoritmo
+determinístico. Nunca se fusiona ni se descarta nada automáticamente — el
+campo solo alimenta la cola de verificación humana (`app/dedup.py`).
+
 ## Seguridad y confianza
 
 - Verificación humana obligatoria antes de que un reporte se convierta en

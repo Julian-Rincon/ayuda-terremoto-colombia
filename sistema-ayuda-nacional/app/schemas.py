@@ -41,6 +41,7 @@ class ReporteCiudadanoOut(BaseModel):
     zona: Optional[str]
     verificado: bool
     centro_id: Optional[int]
+    posible_duplicado_de_id: Optional[int]
     creado_en: datetime
 
     class Config:

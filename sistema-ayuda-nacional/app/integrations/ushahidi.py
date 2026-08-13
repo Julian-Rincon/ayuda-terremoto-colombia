@@ -8,7 +8,7 @@ import os
 import httpx
 from sqlalchemy.orm import Session
 
-from .. import models
+from .. import dedup, models
 from ..ai_helper import clasificar_reporte
 
 USHAHIDI_BASE_URL = os.getenv("USHAHIDI_BASE_URL", "").strip().rstrip("/")
@@ -73,6 +73,7 @@ async def sincronizar_ushahidi(db: Session) -> list[models.ReporteCiudadano]:
         if not post.get("id") or existe_en_sistema(db, str(post["id"])):
             continue
         reporte = _crear_reporte_desde_post(post)
+        dedup.marcar_posible_duplicado(db, reporte)
         db.add(reporte)
         db.commit()
         db.refresh(reporte)

@@ -84,6 +84,10 @@ class ReporteCiudadano(Base):
     centro_id = Column(Integer, ForeignKey("centros_locales.id"), nullable=True)
     centro = relationship("CentroLocal", back_populates="reportes")
 
+    # Detección de duplicados entre canales (dedup.py) — nunca se fusiona ni
+    # descarta automáticamente, solo se deja marcado para revisión humana.
+    posible_duplicado_de_id = Column(Integer, ForeignKey("reportes_ciudadanos.id"), nullable=True)
+
     creado_en = Column(DateTime, default=datetime.utcnow)
 
 

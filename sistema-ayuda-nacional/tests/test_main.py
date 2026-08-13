@@ -135,6 +135,19 @@ def test_login_y_entrega_requiere_token(client):
     assert con_token.status_code == 200
 
 
+def test_reporte_similar_queda_marcado_como_posible_duplicado(client):
+    primero = client.post("/api/v1/reportes", json={
+        "contenido": "Familia sin agua potable en el barrio Cuba hace tres días",
+    }).json()
+
+    segundo = client.post("/api/v1/reportes", json={
+        "contenido": "Familia sin agua potable en el barrio Cuba hace 3 días",
+    }).json()
+
+    assert primero["posible_duplicado_de_id"] is None
+    assert segundo["posible_duplicado_de_id"] == primero["id"]
+
+
 def test_sitrep_hxl_responde_csv(client):
     resp = client.get("/api/v1/sitrep.csv?formato=hxl")
     assert resp.status_code == 200

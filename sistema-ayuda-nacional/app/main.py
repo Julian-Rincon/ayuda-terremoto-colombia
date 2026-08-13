@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
-from . import auth, models, pipeline, schemas, seed_data
+from . import auth, dedup, models, pipeline, schemas, seed_data
 from .ai_helper import clasificar_reporte
 from .database import Base, engine, get_db
 from .hxl_export import generar_sitrep_hxl
@@ -154,6 +154,7 @@ async def crear_reporte_manual(payload: schemas.ReporteCiudadanoCreate, db: Sess
         lon=payload.lon,
         zona=payload.zona,
     )
+    dedup.marcar_posible_duplicado(db, reporte)
     db.add(reporte)
     db.commit()
     db.refresh(reporte)
@@ -216,6 +217,7 @@ async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
         return {"recibido": True, "procesado": False}
 
     reporte = whatsapp.construir_reporte_desde_whatsapp(mensaje)
+    dedup.marcar_posible_duplicado(db, reporte)
     db.add(reporte)
     db.commit()
     db.refresh(reporte)
@@ -228,6 +230,7 @@ async def simular_whatsapp(payload: dict, db: Session = Depends(get_db)):
     """Endpoint de desarrollo: simula un mensaje entrante sin necesitar cuenta Meta real."""
     mensaje = {"remitente": payload["remitente"], "texto": payload["texto"], "ubicacion": payload.get("ubicacion")}
     reporte = whatsapp.construir_reporte_desde_whatsapp(mensaje)
+    dedup.marcar_posible_duplicado(db, reporte)
     db.add(reporte)
     db.commit()
     db.refresh(reporte)
