@@ -4,7 +4,7 @@ Sistema de coordinación de ayuda humanitaria construido tras el terremoto de
 magnitud 7.4 que sacudió el occidente de Colombia el 10 de agosto de 2026
 (epicentro en San José del Palmar, Chocó, con Pereira como la ciudad más
 golpeada). Es un evento real, declarado desastre nacional por el gobierno
-colombiano — ver [Terremoto de Colombia de 2026 en Wikipedia](https://es.wikipedia.org/wiki/Terremoto_de_Colombia_de_2026).
+colombiano — ver la cobertura de El Tiempo: [Pereira, la ciudad más golpeada por el terremoto](https://www.eltiempo.com/justicia/investigacion/pereira-la-ciudad-mas-golpeada-por-el-terremoto-al-menos-67-victimas-mortales-3577462).
 
 El problema que ataca no es falta de organizaciones ni de dinero para
 donar — es **fragmentación de canales**. Cruz Roja, ABACO, Bancos de
