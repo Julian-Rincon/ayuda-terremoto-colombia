@@ -1,0 +1,131 @@
+import enum
+from datetime import datetime
+
+from sqlalchemy import (
+    Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text,
+)
+from sqlalchemy.orm import relationship
+
+from .database import Base
+
+
+class CategoriaNecesidad(str, enum.Enum):
+    alimentos = "alimentos"
+    agua = "agua"
+    refugio = "refugio"
+    salud = "salud"
+    medicamentos = "medicamentos"
+    aseo = "aseo"
+    ropa = "ropa"
+    rescate_escombros = "rescate_escombros"
+    mascotas = "mascotas"
+    reconstruccion = "reconstruccion"
+    otro = "otro"
+
+
+class UrgenciaReporte(str, enum.Enum):
+    alta = "alta"
+    media = "media"
+    baja = "baja"
+    sin_clasificar = "sin_clasificar"
+
+
+class EstadoSolicitud(str, enum.Enum):
+    pendiente = "pendiente"
+    asignada = "asignada"
+    en_proceso = "en_proceso"
+    completada = "completada"
+    descartada = "descartada"
+
+
+class CanalReporte(str, enum.Enum):
+    whatsapp = "whatsapp"
+    ushahidi = "ushahidi"
+    web = "web"
+    sms = "sms"
+    manual = "manual"
+
+
+class CentroLocal(Base):
+    __tablename__ = "centros_locales"
+
+    id = Column(Integer, primary_key=True, index=True)
+    id_territorio = Column(String(50), unique=True, nullable=False, index=True)
+    nombre = Column(String(200), nullable=False)
+    departamento = Column(String(100), nullable=False, index=True)
+    contacto = Column(String(200), nullable=True)
+    contacto_verificado = Column(Boolean, default=False)
+    activo = Column(Boolean, default=True)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+    solicitudes = relationship("Solicitud", back_populates="centro")
+    reportes = relationship("ReporteCiudadano", back_populates="centro")
+
+
+class ReporteCiudadano(Base):
+    __tablename__ = "reportes_ciudadanos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    id_externo = Column(String(120), nullable=True, index=True)
+    canal = Column(Enum(CanalReporte), nullable=False)
+    contenido_original = Column(Text, nullable=False)
+
+    categoria = Column(Enum(CategoriaNecesidad), default=CategoriaNecesidad.otro, index=True)
+    urgencia = Column(Enum(UrgenciaReporte), default=UrgenciaReporte.sin_clasificar, index=True)
+    resumen_ia = Column(Text, nullable=True)
+    clasificado_por_ia = Column(Boolean, default=False)
+
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+    zona = Column(String(120), nullable=True)
+
+    verificado = Column(Boolean, default=False)
+
+    centro_id = Column(Integer, ForeignKey("centros_locales.id"), nullable=True)
+    centro = relationship("CentroLocal", back_populates="reportes")
+
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+
+class Solicitud(Base):
+    __tablename__ = "solicitudes"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    reporte_id = Column(Integer, ForeignKey("reportes_ciudadanos.id"), nullable=True)
+    reporte = relationship("ReporteCiudadano")
+
+    centro_id = Column(Integer, ForeignKey("centros_locales.id"), nullable=False)
+    centro = relationship("CentroLocal", back_populates="solicitudes")
+
+    categoria = Column(Enum(CategoriaNecesidad), nullable=False, index=True)
+    estado = Column(Enum(EstadoSolicitud), default=EstadoSolicitud.pendiente, index=True)
+
+    creado_en = Column(DateTime, default=datetime.utcnow)
+    actualizado_en = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class EventoSismico(Base):
+    __tablename__ = "eventos_sismicos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    id_externo = Column(String(120), unique=True, nullable=False)
+    magnitud = Column(Float, nullable=False)
+    profundidad = Column(Float, nullable=True)
+    lat = Column(Float, nullable=False)
+    lon = Column(Float, nullable=False)
+    lugar = Column(String(300), nullable=True)
+    fuente = Column(String(30), default="usgs")
+    timestamp = Column(DateTime, nullable=False)
+    activo_modo_emergencia = Column(Boolean, default=False)
+    creado_en = Column(DateTime, default=datetime.utcnow)
+
+
+class NodoCredencial(Base):
+    __tablename__ = "nodo_credenciales"
+
+    id = Column(Integer, primary_key=True, index=True)
+    centro_id = Column(Integer, ForeignKey("centros_locales.id"), nullable=False, unique=True)
+    centro = relationship("CentroLocal")
+    secreto_hash = Column(String(200), nullable=False)
+    creado_en = Column(DateTime, default=datetime.utcnow)

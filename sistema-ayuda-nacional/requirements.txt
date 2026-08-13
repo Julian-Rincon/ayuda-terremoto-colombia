@@ -1,0 +1,12 @@
+fastapi==0.141.1
+uvicorn[standard]==0.52.3
+sqlalchemy==2.0.52
+pydantic==2.13.4
+requests==2.34.2
+httpx==0.28.1
+python-dotenv==1.2.2
+websockets==17.0.1
+PyJWT==2.13.0
+bcrypt==5.0.0
+pytest==9.1.1
+pytest-asyncio==1.4.0
