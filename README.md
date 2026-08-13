@@ -1,10 +1,11 @@
 # Ayuda Terremoto Colombia
 
 Sistema de coordinación de ayuda humanitaria construido tras el terremoto de
-magnitud 7.4 que sacudió el occidente de Colombia el 10 de agosto de 2026
-(epicentro en San José del Palmar, Chocó, con Pereira como la ciudad más
-golpeada). Es un evento real, declarado desastre nacional por el gobierno
-colombiano — ver la cobertura de El Tiempo: [Pereira, la ciudad más golpeada por el terremoto](https://www.eltiempo.com/justicia/investigacion/pereira-la-ciudad-mas-golpeada-por-el-terremoto-al-menos-67-victimas-mortales-3577462).
+magnitud 7.4 con epicentro cerca de San José del Palmar (Chocó) que sacudió
+el occidente de Colombia el 10 de agosto de 2026, con afectación oficial en
+Chocó, Risaralda, Caldas y Valle del Cauca. Es un evento real: el gobierno
+colombiano declaró desastre nacional — ver la cobertura de Chequeado (medio
+de verificación de datos): [Terremoto de magnitud 7.4 en Colombia: el Gobierno declara desastre nacional](https://chequeado.com/el-explicador/terremoto-de-magnitud-7-4-en-colombia-el-gobierno-declara-desastre-nacional-y-reporta-al-menos-111-muertos/).
 
 El problema que ataca no es falta de organizaciones ni de dinero para
 donar — es **fragmentación de canales**. Cruz Roja, ABACO, Bancos de
