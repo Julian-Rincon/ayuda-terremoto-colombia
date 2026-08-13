@@ -1,0 +1,86 @@
+.cargando {
+  text-align: center;
+  padding: 48px 0;
+  color: var(--text-muted);
+}
+
+.login .ayuda {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.login .error {
+  color: var(--error);
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.dashboard header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dashboard header h1 {
+  flex: 1;
+}
+
+.estado-conexion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin: 16px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 14px;
+}
+
+.estado-conexion .punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--error);
+}
+
+.estado-conexion.en-linea .punto {
+  background: var(--ok);
+}
+
+.estado-conexion .pendientes {
+  color: var(--text-muted);
+}
+
+.estado-conexion button {
+  margin-left: auto;
+}
+
+.necesidades ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.necesidades li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.necesidades .mensaje,
+.nueva-solicitud .mensaje {
+  color: var(--ok);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+.nueva-solicitud {
+  margin-top: 24px;
+}

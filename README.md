@@ -36,9 +36,20 @@ voluntario, damnificado o para un subsidio — ver la nota de seguridad en
   Ushahidi, auto-activación real por sismos (USGS), export HXL para la
   comunidad humanitaria internacional. Ver su README para el detalle de qué
   integraciones son reales y cuáles corren en modo sandbox.
-- **`docs/superpowers/`** — spec de diseño y plan de implementación del
-  Nodo Central nacional, para quien quiera entender las decisiones de
-  alcance (por ejemplo, por qué no hay manejo de pagos).
+- **[`nodo-local/`](nodo-local/)** — app offline-first (React/Vite +
+  IndexedDB) para que un centro territorial registre reportes y entregas sin
+  conexión y sincronice todo apenas vuelva la señal. Habla con
+  `sistema-ayuda-nacional/`.
+- **`docs/superpowers/`** — specs de diseño y planes de implementación, para
+  quien quiera entender las decisiones de alcance (por ejemplo, por qué no
+  hay manejo de pagos, o qué queda fuera de esta versión).
+
+## Qué falta (honesto)
+
+Capas geoespaciales WMS/WFS reales compatibles con ICDE/SNIGRD — requieren un
+GeoServer y una instancia PostGIS en vivo conectada a datos oficiales, que es
+infraestructura de despliegue, no solo código. `sistema-ayuda-nacional/` usa
+lat/lon simples mientras tanto, suficiente para el pipeline y los exports.
 
 ## Cómo contribuir
 
