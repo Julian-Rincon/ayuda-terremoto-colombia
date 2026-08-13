@@ -1,0 +1,277 @@
+import asyncio
+from typing import List, Optional
+
+from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import PlainTextResponse
+from sqlalchemy.orm import Session
+
+from . import auth, models, pipeline, schemas, seed_data
+from .ai_helper import clasificar_reporte
+from .database import Base, engine, get_db
+from .hxl_export import generar_sitrep_hxl
+from .integrations import usgs, whatsapp
+from .integrations.ushahidi import sincronizar_ushahidi
+from .websocket_manager import manager
+
+Base.metadata.create_all(bind=engine)
+
+ALERTA_SEGURIDAD = (
+    "Este sistema NO maneja donaciones ni pagos. Para donar dinero, use "
+    "únicamente los canales oficiales ya establecidos (Cruz Roja, ABACO, "
+    "Bancos de Alimentos, o la llave Bre-B publicada directamente por esas "
+    "entidades). Ninguna entidad legítima cobra por registrar a alguien como "
+    "voluntario, damnificado o para un subsidio."
+)
+
+app = FastAPI(
+    title="Sistema de Ayuda Nacional — Nodo Central",
+    description="Coordinación de reportes ciudadanos y centros territoriales. Terremoto Colombia, agosto 2026. No maneja pagos.",
+    version="0.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+_tarea_usgs: Optional[asyncio.Task] = None
+
+
+@app.on_event("startup")
+def startup():
+    db = next(get_db())
+    seed_data.sembrar_datos_iniciales(db)
+    global _tarea_usgs
+    _tarea_usgs = asyncio.create_task(usgs.escuchar_usgs_loop())
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    if _tarea_usgs:
+        _tarea_usgs.cancel()
+
+
+@app.get("/")
+def root():
+    return {
+        "servicio": "Sistema de Ayuda Nacional — Nodo Central",
+        "alcance": "Terremoto Colombia, 10 de agosto de 2026 — coordinación nacional",
+        "alerta_seguridad": ALERTA_SEGURIDAD,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Centros locales
+# ---------------------------------------------------------------------------
+
+@app.get("/api/v1/centros", response_model=List[schemas.CentroLocalOut])
+def listar_centros(db: Session = Depends(get_db)):
+    return db.query(models.CentroLocal).all()
+
+
+@app.get("/api/v1/centros/{centro_id}/necesidades", response_model=schemas.NecesidadesCentro)
+def necesidades_centro(centro_id: int, db: Session = Depends(get_db)):
+    centro = db.query(models.CentroLocal).get(centro_id)
+    if not centro:
+        raise HTTPException(404, "Centro no encontrado")
+
+    pendientes = (
+        db.query(models.Solicitud)
+        .filter(models.Solicitud.centro_id == centro_id, models.Solicitud.estado == models.EstadoSolicitud.pendiente)
+        .all()
+    )
+    conteo: dict[str, int] = {}
+    for s in pendientes:
+        conteo[s.categoria.value] = conteo.get(s.categoria.value, 0) + 1
+
+    return schemas.NecesidadesCentro(centro_id=centro_id, pendientes_por_categoria=conteo, total_pendientes=len(pendientes))
+
+
+@app.post("/api/v1/centros/{centro_id}/entregas", response_model=schemas.SolicitudOut)
+def registrar_entrega(
+    centro_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    identidad: dict = Depends(auth.requerir_centro_autenticado),
+):
+    if identidad["centro_id"] != centro_id:
+        raise HTTPException(403, "El token no corresponde a este centro")
+
+    solicitud = (
+        db.query(models.Solicitud)
+        .filter(
+            models.Solicitud.centro_id == centro_id,
+            models.Solicitud.categoria == payload["categoria"],
+            models.Solicitud.estado == models.EstadoSolicitud.pendiente,
+        )
+        .first()
+    )
+    if not solicitud:
+        raise HTTPException(404, "No hay una solicitud pendiente de esa categoría para este centro")
+
+    solicitud.estado = models.EstadoSolicitud.completada
+    db.commit()
+    db.refresh(solicitud)
+    return solicitud
+
+
+# ---------------------------------------------------------------------------
+# Autenticación de nodos
+# ---------------------------------------------------------------------------
+
+@app.post("/api/v1/auth/token", response_model=schemas.TokenOut)
+def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
+    centro = db.query(models.CentroLocal).filter_by(id_territorio=payload.id_territorio).first()
+    if not centro:
+        raise HTTPException(401, "Credenciales inválidas")
+
+    credencial = db.query(models.NodoCredencial).filter_by(centro_id=centro.id).first()
+    if not credencial or not auth.verificar_secreto(payload.secreto, credencial.secreto_hash):
+        raise HTTPException(401, "Credenciales inválidas")
+
+    token = auth.generar_token(centro.id, centro.id_territorio)
+    return schemas.TokenOut(access_token=token)
+
+
+# ---------------------------------------------------------------------------
+# Reportes ciudadanos
+# ---------------------------------------------------------------------------
+
+@app.post("/api/v1/reportes", response_model=schemas.ReporteCiudadanoOut)
+async def crear_reporte_manual(payload: schemas.ReporteCiudadanoCreate, db: Session = Depends(get_db)):
+    clasificacion = clasificar_reporte(payload.contenido)
+    reporte = models.ReporteCiudadano(
+        canal=payload.canal,
+        contenido_original=payload.contenido,
+        categoria=clasificacion["categoria"],
+        urgencia=clasificacion["urgencia"],
+        resumen_ia=clasificacion["resumen"],
+        clasificado_por_ia=clasificacion["clasificado_por_ia"],
+        lat=payload.lat,
+        lon=payload.lon,
+        zona=payload.zona,
+    )
+    db.add(reporte)
+    db.commit()
+    db.refresh(reporte)
+    await manager.broadcast("nuevo_reporte", schemas.ReporteCiudadanoOut.model_validate(reporte).model_dump())
+    return reporte
+
+
+@app.get("/api/v1/reportes", response_model=List[schemas.ReporteCiudadanoOut])
+def listar_reportes(
+    verificado: Optional[bool] = None,
+    categoria: Optional[models.CategoriaNecesidad] = None,
+    canal: Optional[models.CanalReporte] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.ReporteCiudadano)
+    if verificado is not None:
+        query = query.filter(models.ReporteCiudadano.verificado == verificado)
+    if categoria:
+        query = query.filter(models.ReporteCiudadano.categoria == categoria)
+    if canal:
+        query = query.filter(models.ReporteCiudadano.canal == canal)
+    return query.order_by(models.ReporteCiudadano.creado_en.desc()).all()
+
+
+@app.post("/api/v1/reportes/{reporte_id}/verificar", response_model=schemas.ReporteCiudadanoOut)
+async def verificar_reporte(reporte_id: int, payload: schemas.ReporteVerificar, db: Session = Depends(get_db)):
+    reporte = db.query(models.ReporteCiudadano).get(reporte_id)
+    if not reporte:
+        raise HTTPException(404, "Reporte no encontrado")
+
+    centro = db.query(models.CentroLocal).get(payload.centro_id)
+    if not centro:
+        raise HTTPException(404, "Centro no encontrado")
+
+    reporte.verificado = True
+    reporte.centro_id = centro.id
+    db.commit()
+    db.refresh(reporte)
+
+    pipeline.crear_solicitud_desde_reporte(db, reporte)
+
+    await manager.broadcast("reporte_verificado", schemas.ReporteCiudadanoOut.model_validate(reporte).model_dump())
+    return reporte
+
+
+# ---------------------------------------------------------------------------
+# Webhooks e integraciones (sandbox salvo USGS)
+# ---------------------------------------------------------------------------
+
+@app.post("/api/v1/webhooks/whatsapp")
+async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
+    cuerpo = await request.body()
+    firma = request.headers.get("X-Hub-Signature-256")
+    if not auth.validar_firma_whatsapp(cuerpo, firma):
+        raise HTTPException(401, "Firma de webhook inválida")
+
+    payload = await request.json()
+    mensaje = whatsapp.parsear_mensaje_entrante(payload)
+    if mensaje is None:
+        return {"recibido": True, "procesado": False}
+
+    reporte = whatsapp.construir_reporte_desde_whatsapp(mensaje)
+    db.add(reporte)
+    db.commit()
+    db.refresh(reporte)
+    await manager.broadcast("nuevo_reporte", schemas.ReporteCiudadanoOut.model_validate(reporte).model_dump())
+    return {"recibido": True, "procesado": True, "reporte_id": reporte.id}
+
+
+@app.post("/sandbox/whatsapp/simular", response_model=schemas.ReporteCiudadanoOut)
+async def simular_whatsapp(payload: dict, db: Session = Depends(get_db)):
+    """Endpoint de desarrollo: simula un mensaje entrante sin necesitar cuenta Meta real."""
+    mensaje = {"remitente": payload["remitente"], "texto": payload["texto"], "ubicacion": payload.get("ubicacion")}
+    reporte = whatsapp.construir_reporte_desde_whatsapp(mensaje)
+    db.add(reporte)
+    db.commit()
+    db.refresh(reporte)
+    return reporte
+
+
+@app.post("/api/v1/integraciones/ushahidi/sincronizar", response_model=List[schemas.ReporteCiudadanoOut])
+async def sincronizar_ushahidi_endpoint(db: Session = Depends(get_db)):
+    return await sincronizar_ushahidi(db)
+
+
+# ---------------------------------------------------------------------------
+# Eventos sísmicos
+# ---------------------------------------------------------------------------
+
+@app.get("/api/v1/eventos-sismicos/ultimo", response_model=Optional[schemas.EventoSismicoOut])
+def ultimo_evento_sismico(db: Session = Depends(get_db)):
+    return (
+        db.query(models.EventoSismico)
+        .order_by(models.EventoSismico.timestamp.desc())
+        .first()
+    )
+
+
+# ---------------------------------------------------------------------------
+# Interoperabilidad / export
+# ---------------------------------------------------------------------------
+
+@app.get("/api/v1/sitrep.csv")
+def sitrep_csv(formato: str = "hxl", db: Session = Depends(get_db)):
+    if formato != "hxl":
+        raise HTTPException(400, "Solo se soporta formato=hxl por ahora")
+    return PlainTextResponse(generar_sitrep_hxl(db), media_type="text/csv")
+
+
+# ---------------------------------------------------------------------------
+# Tiempo real
+# ---------------------------------------------------------------------------
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
