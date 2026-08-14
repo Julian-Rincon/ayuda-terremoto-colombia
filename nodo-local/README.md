@@ -1,10 +1,15 @@
 # Nodo Local — app offline-first
 
-App para que un centro territorial (Pereira/Risaralda, Chocó, Caldas, Valle)
-registre reportes y entregas **incluso sin conexión**, y sincronice todo con
-el [Nodo Central](../sistema-ayuda-nacional/) apenas vuelva la señal. Es la
-pieza que `planoidea.md` §8 marca como "la parte que más importa" en zonas
-como Chocó, donde la conectividad es intermitente.
+Tiene dos caras:
+
+- **Portal público** (sin login): cualquiera puede ver el panorama nacional,
+  reportar una necesidad, o registrarse como voluntario/colectivo.
+- **Panel de coordinador** (con login, uno por centro territorial —
+  Pereira/Risaralda, Chocó, Caldas, Valle): registra reportes y entregas
+  **incluso sin conexión**, y sincroniza todo con el
+  [Nodo Central](../sistema-ayuda-nacional/) apenas vuelva la señal. Es la
+  pieza que `planoidea.md` §8 marca como "la parte que más importa" en zonas
+  como Chocó, donde la conectividad es intermitente.
 
 ## Cómo funciona el offline-first
 
@@ -45,10 +50,11 @@ configurado en el backend.
 npm test
 ```
 
-17 tests con Vitest, sobre la lógica que garantiza que nada se pierde
+18 tests con Vitest, sobre la lógica que garantiza que nada se pierde
 offline: cola de salida (`db.test.js`) y motor de sincronización con
-reintentos (`sync.test.js`), usando `fake-indexeddb` para simular IndexedDB
-en Node sin necesitar un navegador real.
+reintentos (`sync.test.js`, incluye reportes, entregas y registro de
+colectivos), usando `fake-indexeddb` para simular IndexedDB en Node sin
+necesitar un navegador real.
 
 **Nota honesta:** estos tests cubren la lógica de persistencia y
 sincronización, que es donde vive el riesgo real de un sistema offline-first
@@ -62,18 +68,35 @@ un navegador.
 
 ```
 src/
-├── db.js              # IndexedDB: sesión, cache de necesidades, outbox
+├── db.js              # IndexedDB: sesión, cache de necesidades/envíos, outbox
 ├── api.js              # cliente HTTP al Nodo Central
 ├── sync.js              # motor de sincronización (flush del outbox)
 ├── hooks/useOnlineStatus.js
 └── components/
-    ├── Login.jsx
-    ├── Dashboard.jsx
+    ├── NavPublica.jsx          # pestañas: Inicio / Reportar / Registrarme / Coordinador
+    ├── Inicio.jsx              # panorama nacional público, sin login
+    ├── ReportarPublico.jsx     # reportar una necesidad, sin login
+    ├── RegistrarColectivo.jsx  # registrarse como voluntario/colectivo, sin login
+    ├── Login.jsx               # login de coordinador (por centro)
+    ├── Dashboard.jsx           # panel del coordinador, requiere sesión
     ├── EstadoConexion.jsx
     ├── ListaNecesidades.jsx
     ├── EnviosEnCamino.jsx
-    └── NuevaSolicitudForm.jsx
+    └── NuevaSolicitudForm.jsx  # reusado por ReportarPublico y por el Dashboard
 ```
+
+## Portal público
+
+`Inicio.jsx` consulta `GET /api/v1/resumen` del Nodo Central y muestra, sin
+pedir login a nadie, cuántas zonas están activas, cuántas necesidades hay
+reportadas/confirmadas, cuántos colectivos están confirmados y cuántos
+envíos vienen en camino — el objetivo es que cualquier persona interesada
+entienda el sistema de un vistazo.
+
+`ReportarPublico.jsx` y `RegistrarColectivo.jsx` reutilizan el mismo patrón
+offline-first que el resto de la app: la acción se guarda primero en el
+`outbox` local y se sincroniza apenas hay conexión, así que reportar o
+registrarse como voluntario funciona incluso sin señal.
 
 ## Envíos en camino
 

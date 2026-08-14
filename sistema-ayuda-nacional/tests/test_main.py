@@ -226,6 +226,73 @@ def test_listar_envios_filtra_por_centro_y_estado(client):
     assert envios[0]["origen"] == "Bogotá"
 
 
+def test_registrar_colectivo_queda_sin_verificar_por_defecto(client):
+    resp = client.post("/api/v1/colectivos", json={
+        "nombre": "Voluntarios Cuba Pereira",
+        "tipo": "logistica",
+        "zona_cobertura": "Pereira - comuna Cuba",
+        "contacto": "316 000 0000",
+    })
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["verificado"] is False
+    assert data["tipo"] == "logistica"
+
+
+def test_verificar_colectivo(client):
+    creado = client.post("/api/v1/colectivos", json={"nombre": "Cruz Roja seccional demo"}).json()
+    resp = client.patch(f"/api/v1/colectivos/{creado['id']}/verificar")
+    assert resp.status_code == 200
+    assert resp.json()["verificado"] is True
+
+
+def test_listar_colectivos_filtra_por_verificado(client):
+    sin_verificar = client.post("/api/v1/colectivos", json={"nombre": "Colectivo A"}).json()
+    verificado = client.post("/api/v1/colectivos", json={"nombre": "Colectivo B"}).json()
+    client.patch(f"/api/v1/colectivos/{verificado['id']}/verificar")
+
+    resp = client.get("/api/v1/colectivos?verificado=true")
+    ids = [c["id"] for c in resp.json()]
+    assert verificado["id"] in ids
+    assert sin_verificar["id"] not in ids
+
+
+def test_resumen_nacional_agrega_a_traves_de_todos_los_centros(client):
+    centros = client.get("/api/v1/centros").json()
+    pereira = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+    choco = next(c for c in centros if c["id_territorio"] == "choco")
+
+    r1 = client.post("/api/v1/reportes", json={"contenido": "Sin agua potable"}).json()
+    r2 = client.post("/api/v1/reportes", json={"contenido": "Sin comida hace dias"}).json()
+    client.post(f"/api/v1/reportes/{r1['id']}/verificar", json={"centro_id": pereira["id"]})
+    client.post(f"/api/v1/reportes/{r2['id']}/verificar", json={"centro_id": choco["id"]})
+
+    envio = client.post("/api/v1/envios", json={
+        "centro_id": pereira["id"], "categoria": "alimentos", "cantidad": 50, "origen": "Bogotá",
+    }).json()
+    client.patch(f"/api/v1/envios/{envio['id']}/verificar")
+
+    colectivo = client.post("/api/v1/colectivos", json={"nombre": "Colectivo demo"}).json()
+    client.patch(f"/api/v1/colectivos/{colectivo['id']}/verificar")
+
+    resumen = client.get("/api/v1/resumen").json()
+
+    assert resumen["total_centros"] == 4
+    assert resumen["total_reportes"] == 2
+    assert resumen["total_solicitudes_pendientes"] == 2
+    assert resumen["total_colectivos_verificados"] == 1
+    assert resumen["total_envios_verificados_en_camino"] == 1
+
+
+def test_resumen_nacional_sin_datos_no_falla(client):
+    resp = client.get("/api/v1/resumen")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total_centros"] == 4
+    assert data["total_reportes"] == 0
+    assert data["ultimo_evento_sismico"] is None
+
+
 def test_sitrep_hxl_responde_csv(client):
     resp = client.get("/api/v1/sitrep.csv?formato=hxl")
     assert resp.status_code == 200

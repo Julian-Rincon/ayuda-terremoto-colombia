@@ -53,6 +53,16 @@ describe('sincronizarPendientes', () => {
     expect(api.registrarEntrega).toHaveBeenCalledWith(1, 'agua', 'jwt-123')
   })
 
+  it('sincroniza un registro de colectivo pendiente', async () => {
+    api.crearColectivo.mockResolvedValue({ id: 9 })
+    await db.encolarAccion('colectivo', { nombre: 'Voluntarios Cuba' })
+
+    const resultado = await sincronizarPendientes()
+
+    expect(resultado).toEqual({ sincronizados: 1, fallidos: 0 })
+    expect(api.crearColectivo).toHaveBeenCalledWith({ nombre: 'Voluntarios Cuba' })
+  })
+
   it('marca error en una entrega si no hay sesión activa', async () => {
     await db.encolarAccion('entrega', { centroId: 1, categoria: 'agua' })
 

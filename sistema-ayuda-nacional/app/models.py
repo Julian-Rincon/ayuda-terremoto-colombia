@@ -53,6 +53,17 @@ class EstadoEnvio(str, enum.Enum):
     cancelado = "cancelado"
 
 
+class TipoColectivo(str, enum.Enum):
+    voluntariado = "voluntariado"
+    logistica = "logistica"
+    salud = "salud"
+    alimentos = "alimentos"
+    refugio = "refugio"
+    rescate = "rescate"
+    construccion = "construccion"
+    general = "general"
+
+
 class CentroLocal(Base):
     __tablename__ = "centros_locales"
 
@@ -160,6 +171,29 @@ class Envio(Base):
 
     creado_en = Column(DateTime, default=datetime.utcnow)
     actualizado_en = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Colectivo(Base):
+    """
+    Voluntario u organización que se ofrece a ayudar — el lado de "quien
+    puede darla" en "conectar a quien necesita con quien puede darla".
+    Registro público, abierto a cualquiera; NUNCA aparece disponible ni se
+    le puede asignar nada hasta que un humano coordinador lo verifique
+    (mismo gate que reportes y envíos — evita que alguien se haga pasar por
+    ayuda legítima).
+    """
+    __tablename__ = "colectivos"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre = Column(String(200), nullable=False)
+    tipo = Column(Enum(TipoColectivo), default=TipoColectivo.general, index=True)
+    descripcion = Column(Text, nullable=True)
+    zona_cobertura = Column(String(300), nullable=True)
+    contacto = Column(String(200), nullable=True)
+
+    verificado = Column(Boolean, default=False)
+
+    creado_en = Column(DateTime, default=datetime.utcnow)
 
 
 class NodoCredencial(Base):

@@ -2,6 +2,10 @@ import { useCallback, useEffect, useState } from 'react'
 import * as db from './db.js'
 import { sincronizarPendientes } from './sync.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
+import NavPublica from './components/NavPublica.jsx'
+import Inicio from './components/Inicio.jsx'
+import ReportarPublico from './components/ReportarPublico.jsx'
+import RegistrarColectivo from './components/RegistrarColectivo.jsx'
 import Login from './components/Login.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import './App.css'
@@ -9,6 +13,7 @@ import './App.css'
 export default function App() {
   const [sesion, setSesion] = useState(undefined) // undefined = cargando, null = sin sesión
   const [pendientes, setPendientes] = useState(0)
+  const [vista, setVista] = useState('inicio')
   const enLinea = useOnlineStatus()
 
   const actualizarPendientes = useCallback(async () => {
@@ -33,6 +38,12 @@ export default function App() {
   async function handleLogout() {
     await db.borrarSesion()
     setSesion(null)
+    setVista('inicio')
+  }
+
+  function handleLogin(nuevaSesion) {
+    setSesion(nuevaSesion)
+    setVista('coordinador')
   }
 
   if (sesion === undefined) {
@@ -41,18 +52,24 @@ export default function App() {
 
   return (
     <div className="app">
-      {sesion ? (
-        <Dashboard
-          sesion={sesion}
-          enLinea={enLinea}
-          pendientes={pendientes}
-          onAccionEncolada={actualizarPendientes}
-          onSincronizar={sincronizar}
-          onLogout={handleLogout}
-        />
-      ) : (
-        <Login onLogin={setSesion} />
-      )}
+      <NavPublica vista={vista} onCambiarVista={setVista} />
+
+      {vista === 'inicio' && <Inicio />}
+      {vista === 'reportar' && <ReportarPublico />}
+      {vista === 'registrarme' && <RegistrarColectivo />}
+      {vista === 'coordinador' &&
+        (sesion ? (
+          <Dashboard
+            sesion={sesion}
+            enLinea={enLinea}
+            pendientes={pendientes}
+            onAccionEncolada={actualizarPendientes}
+            onSincronizar={sincronizar}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <Login onLogin={handleLogin} />
+        ))}
     </div>
   )
 }

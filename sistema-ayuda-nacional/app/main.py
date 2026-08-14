@@ -333,6 +333,96 @@ async def actualizar_estado_envio(envio_id: int, payload: schemas.EnvioEstadoUpd
 
 
 # ---------------------------------------------------------------------------
+# Colectivos y voluntarios ("quien puede darla") — registro público
+# ---------------------------------------------------------------------------
+
+@app.post("/api/v1/colectivos", response_model=schemas.ColectivoOut)
+async def crear_colectivo(payload: schemas.ColectivoCreate, db: Session = Depends(get_db)):
+    """
+    Registro público, sin autenticación: cualquier voluntario o colectivo
+    puede anotarse. Nace sin verificar — nunca aparece como disponible ni
+    se le puede asignar nada hasta que un humano coordinador lo confirme.
+    """
+    colectivo = models.Colectivo(**payload.model_dump())
+    db.add(colectivo)
+    db.commit()
+    db.refresh(colectivo)
+    await manager.broadcast("nuevo_colectivo", schemas.ColectivoOut.model_validate(colectivo).model_dump())
+    return colectivo
+
+
+@app.get("/api/v1/colectivos", response_model=List[schemas.ColectivoOut])
+def listar_colectivos(
+    verificado: Optional[bool] = None,
+    tipo: Optional[models.TipoColectivo] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.Colectivo)
+    if verificado is not None:
+        query = query.filter(models.Colectivo.verificado == verificado)
+    if tipo:
+        query = query.filter(models.Colectivo.tipo == tipo)
+    return query.order_by(models.Colectivo.creado_en.desc()).all()
+
+
+@app.patch("/api/v1/colectivos/{colectivo_id}/verificar", response_model=schemas.ColectivoOut)
+async def verificar_colectivo(colectivo_id: int, db: Session = Depends(get_db)):
+    colectivo = db.query(models.Colectivo).get(colectivo_id)
+    if not colectivo:
+        raise HTTPException(404, "Colectivo no encontrado")
+    colectivo.verificado = True
+    db.commit()
+    db.refresh(colectivo)
+    await manager.broadcast("colectivo_verificado", schemas.ColectivoOut.model_validate(colectivo).model_dump())
+    return colectivo
+
+
+# ---------------------------------------------------------------------------
+# Panorama nacional — vista pública agregada, sin login
+# ---------------------------------------------------------------------------
+
+@app.get("/api/v1/resumen", response_model=schemas.ResumenNacional)
+def resumen_nacional(db: Session = Depends(get_db)):
+    solicitudes_pendientes = (
+        db.query(models.Solicitud).filter(models.Solicitud.estado == models.EstadoSolicitud.pendiente).all()
+    )
+    por_categoria: dict[str, int] = {}
+    for s in solicitudes_pendientes:
+        por_categoria[s.categoria.value] = por_categoria.get(s.categoria.value, 0) + 1
+
+    envios_verificados_en_camino = (
+        db.query(models.Envio)
+        .filter(
+            models.Envio.verificado.is_(True),
+            models.Envio.estado.in_([models.EstadoEnvio.comprometido, models.EstadoEnvio.en_transito]),
+        )
+        .count()
+    )
+
+    ultimo_evento = (
+        db.query(models.EventoSismico).order_by(models.EventoSismico.timestamp.desc()).first()
+    )
+
+    return schemas.ResumenNacional(
+        total_centros=db.query(models.CentroLocal).count(),
+        total_reportes=db.query(models.ReporteCiudadano).count(),
+        reportes_pendientes_verificacion=db.query(models.ReporteCiudadano)
+        .filter(models.ReporteCiudadano.verificado.is_(False))
+        .count(),
+        total_solicitudes_pendientes=len(solicitudes_pendientes),
+        solicitudes_pendientes_por_categoria=por_categoria,
+        total_colectivos_verificados=db.query(models.Colectivo)
+        .filter(models.Colectivo.verificado.is_(True))
+        .count(),
+        total_colectivos_pendientes_verificacion=db.query(models.Colectivo)
+        .filter(models.Colectivo.verificado.is_(False))
+        .count(),
+        total_envios_verificados_en_camino=envios_verificados_en_camino,
+        ultimo_evento_sismico=ultimo_evento,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Eventos sísmicos
 # ---------------------------------------------------------------------------
 

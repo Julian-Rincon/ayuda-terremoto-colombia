@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from .models import CanalReporte, CategoriaNecesidad, EstadoEnvio, EstadoSolicitud, UrgenciaReporte
+from .models import CanalReporte, CategoriaNecesidad, EstadoEnvio, EstadoSolicitud, TipoColectivo, UrgenciaReporte
 
 
 class CentroLocalOut(BaseModel):
@@ -99,6 +99,28 @@ class EnvioEstadoUpdate(BaseModel):
     estado: EstadoEnvio
 
 
+class ColectivoCreate(BaseModel):
+    nombre: str = Field(..., min_length=2)
+    tipo: TipoColectivo = TipoColectivo.general
+    descripcion: Optional[str] = None
+    zona_cobertura: Optional[str] = None
+    contacto: Optional[str] = None
+
+
+class ColectivoOut(BaseModel):
+    id: int
+    nombre: str
+    tipo: TipoColectivo
+    descripcion: Optional[str]
+    zona_cobertura: Optional[str]
+    contacto: Optional[str]
+    verificado: bool
+    creado_en: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class EventoSismicoOut(BaseModel):
     id: int
     id_externo: str
@@ -113,6 +135,18 @@ class EventoSismicoOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ResumenNacional(BaseModel):
+    total_centros: int
+    total_reportes: int
+    reportes_pendientes_verificacion: int
+    total_solicitudes_pendientes: int
+    solicitudes_pendientes_por_categoria: dict[str, int]
+    total_colectivos_verificados: int
+    total_colectivos_pendientes_verificacion: int
+    total_envios_verificados_en_camino: int
+    ultimo_evento_sismico: Optional[EventoSismicoOut]
 
 
 class LoginRequest(BaseModel):

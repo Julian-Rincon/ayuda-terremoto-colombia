@@ -52,12 +52,12 @@ Abre `http://localhost:8000/docs` — Swagger UI interactivo, prueba todo desde 
 pytest -v
 ```
 
-56 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
+62 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
 validación de firma de webhooks, siembra de datos (sin contactos
 inventados), pipeline de priorización, export HXL, USGS (umbral de
 activación, dedup, resiliencia a fallos de red), WhatsApp y Ushahidi
-(sandbox), detección de duplicados, envíos en camino, y la app FastAPI
-completa end-to-end.
+(sandbox), detección de duplicados, envíos en camino, colectivos/voluntarios,
+resumen nacional, y la app FastAPI completa end-to-end.
 
 ## Endpoints principales
 
@@ -79,7 +79,29 @@ completa end-to-end.
 | GET | `/api/v1/envios?centro_id=&categoria=&estado=&verificado=` | Listar envíos, filtrable |
 | PATCH | `/api/v1/envios/{id}/verificar` | Verificación humana — obligatoria antes de que cuente como cobertura |
 | PATCH | `/api/v1/envios/{id}/estado` | Actualizar estado (`comprometido` → `en_transito` → `entregado`) |
+| POST | `/api/v1/colectivos` | Registro público de un voluntario/colectivo (queda sin verificar) |
+| GET | `/api/v1/colectivos?verificado=&tipo=` | Listar colectivos, filtrable |
+| PATCH | `/api/v1/colectivos/{id}/verificar` | Verificación humana — obligatoria antes de aparecer disponible |
+| GET | `/api/v1/resumen` | Panorama agregado nacional (sin login) — para la vista pública |
 | WS | `/ws` | Feed de eventos en tiempo real |
+
+## Colectivos: el otro lado de "conectar a quien necesita con quien puede darla"
+
+Registro público y abierto para que cualquier persona o grupo se anote como
+voluntario/colectivo (`POST /api/v1/colectivos`, sin autenticación). Igual
+que reportes y envíos: nace con `verificado=false` y nunca aparece
+disponible ni se le puede asignar nada hasta que un humano coordinador lo
+confirme — así nadie puede hacerse pasar por ayuda legítima.
+
+## Resumen nacional
+
+`GET /api/v1/resumen` agrega en un solo lugar el estado de todo el sistema
+(no de un centro en particular): cuántos centros hay, reportes totales y
+pendientes de verificar, solicitudes activas por categoría, colectivos
+confirmados, envíos verificados en camino, y el último sismo detectado. Es
+el endpoint que alimenta la pantalla de inicio pública de `nodo-local/` —
+pensado para que cualquiera vea el sistema funcionando sin necesitar
+credenciales de coordinador.
 
 ## Envíos: evitar que dos sitios manden lo mismo sin saberlo
 

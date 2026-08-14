@@ -77,3 +77,18 @@ def test_crear_envio_asociado_a_centro(db_session):
     assert envio.estado == models.EstadoEnvio.comprometido
     assert envio.verificado is False
     assert envio.centro.id_territorio == "risaralda-pereira"
+
+
+def test_crear_colectivo_queda_sin_verificar_por_defecto(db_session):
+    colectivo = models.Colectivo(
+        nombre="Voluntarios Cuba Pereira",
+        tipo=models.TipoColectivo.logistica,
+        zona_cobertura="Pereira - comuna Cuba",
+        contacto="316 000 0000",
+    )
+    db_session.add(colectivo)
+    db_session.commit()
+    db_session.refresh(colectivo)
+
+    assert colectivo.verificado is False
+    assert colectivo.tipo == models.TipoColectivo.logistica

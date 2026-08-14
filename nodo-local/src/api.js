@@ -48,3 +48,14 @@ export function registrarEntrega(centroId, categoria, token) {
 export function obtenerEnvios(centroId) {
   return solicitar(`/api/v1/envios?centro_id=${centroId}`)
 }
+
+export function obtenerResumenNacional() {
+  return solicitar('/api/v1/resumen')
+}
+
+export function crearColectivo(payload) {
+  return solicitar('/api/v1/colectivos', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}

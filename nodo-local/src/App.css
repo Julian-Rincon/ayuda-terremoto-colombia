@@ -4,16 +4,97 @@
   color: var(--text-muted);
 }
 
-.login .ayuda {
+.ayuda {
   font-size: 13px;
   color: var(--text-muted);
   margin-bottom: 16px;
+  line-height: 1.5;
 }
 
-.login .error {
+.error {
   color: var(--error);
   font-size: 14px;
   margin-bottom: 12px;
+}
+
+.nav-publica {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.nav-publica button {
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+  font-size: 13px;
+  padding: 6px 10px;
+}
+
+.nav-publica button.activa {
+  background: var(--surface);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.resumen-nacional {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  text-align: center;
+}
+
+.tarjeta .numero {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.tarjeta .etiqueta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.necesidades-nacionales {
+  margin-top: 24px;
+}
+
+.necesidades-nacionales ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.necesidades-nacionales li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  text-transform: capitalize;
+}
+
+.necesidades-nacionales .cantidad {
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.inicio .pie {
+  margin-top: 24px;
 }
 
 .dashboard header {

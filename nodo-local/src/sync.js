@@ -22,6 +22,8 @@ export async function sincronizarPendientes() {
     try {
       if (accion.tipo === 'reporte') {
         await api.crearReporte(accion.payload)
+      } else if (accion.tipo === 'colectivo') {
+        await api.crearColectivo(accion.payload)
       } else if (accion.tipo === 'entrega') {
         if (!sesion) {
           throw new Error('No hay sesión activa para sincronizar esta entrega')
