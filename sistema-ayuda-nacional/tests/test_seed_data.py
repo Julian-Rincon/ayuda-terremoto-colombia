@@ -32,3 +32,18 @@ def test_cada_centro_tiene_coordenadas_para_el_mapa(db_session):
     for centro in centros:
         assert centro.lat is not None
         assert centro.lon is not None
+
+
+def test_siembra_colectivos_oficiales_ya_verificados(db_session):
+    seed_data.sembrar_datos_iniciales(db_session)
+    colectivos = db_session.query(models.Colectivo).all()
+    nombres = {c.nombre for c in colectivos}
+    assert "Cruz Roja Colombiana — Seccional Pereira" in nombres
+    assert "Hospital Universitario San Jorge — Banco de Sangre" in nombres
+    assert all(c.verificado for c in colectivos)
+
+
+def test_sembrar_datos_iniciales_no_duplica_colectivos(db_session):
+    seed_data.sembrar_datos_iniciales(db_session)
+    seed_data.sembrar_datos_iniciales(db_session)
+    assert db_session.query(models.Colectivo).count() == 2

@@ -1,9 +1,9 @@
 """
-Nodos territoriales iniciales.
+Nodos territoriales y colectivos oficiales iniciales.
 
-IMPORTANTE: solo el contacto de Pereira/Risaralda está verificado — es el
-mismo dato ya confirmado en pereira-ayuda-backend/app/seed_data.py (Alcaldía
-de Pereira, línea de Gestión del Riesgo). Los demás nodos (Chocó, Caldas,
+IMPORTANTE: solo el contacto de Pereira/Risaralda y los colectivos oficiales
+de abajo están verificados — son datos reales confirmados en medios al
+12-13 de agosto de 2026 (ver README). Los demás centros (Chocó, Caldas,
 Valle) se crean SIN contacto: alguien debe confirmarlo directamente con la
 entidad territorial antes de mostrarlo a nadie. No se inventan teléfonos.
 """
@@ -12,7 +12,7 @@ import os
 from sqlalchemy.orm import Session
 
 from . import auth
-from .models import CentroLocal, NodoCredencial
+from .models import CentroLocal, Colectivo, NodoCredencial, TipoColectivo
 
 CENTROS_SEED = [
     {
@@ -53,6 +53,28 @@ CENTROS_SEED = [
     },
 ]
 
+COLECTIVOS_OFICIALES_SEED = [
+    {
+        "nombre": "Cruz Roja Colombiana — Seccional Pereira",
+        "tipo": TipoColectivo.general,
+        "descripcion": "Atención de emergencia, voluntariado, reporte de desaparecidos.",
+        "zona_cobertura": "Pereira - todas las comunas",
+        "contacto": "316 478 1821",
+        "verificado": True,
+    },
+    {
+        "nombre": "Hospital Universitario San Jorge — Banco de Sangre",
+        "tipo": TipoColectivo.salud,
+        "descripcion": (
+            "Banco de sangre con escasez confirmada tras el terremoto. "
+            "Recibe donantes de todos los tipos de sangre, lunes a sábado 8am-5pm."
+        ),
+        "zona_cobertura": "Carrera 4 #24-88, Pereira",
+        "contacto": "(+57) 606 316 9024",
+        "verificado": True,
+    },
+]
+
 
 def sembrar_datos_iniciales(db: Session) -> None:
     if db.query(CentroLocal).first():
@@ -72,3 +94,7 @@ def sembrar_datos_iniciales(db: Session) -> None:
         )
         db.add(credencial)
         db.commit()
+
+    for item in COLECTIVOS_OFICIALES_SEED:
+        db.add(Colectivo(**item))
+    db.commit()

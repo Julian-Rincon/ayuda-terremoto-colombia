@@ -28,10 +28,6 @@ voluntario, damnificado o para un subsidio — ver la nota de seguridad en
   contexto real de la emergencia, ecosistema de actores existentes, diagrama
   UML, especificación de API, stack recomendado y notas de resiliencia y
   confianza.
-- **[`pereira-ayuda-backend/`](pereira-ayuda-backend/)** — MVP funcional
-  acotado a una sola ciudad (Pereira): conecta solicitudes ciudadanas con
-  colectivos verificados, con clasificación por IA gratuita y actualizaciones
-  en tiempo real.
 - **[`sistema-ayuda-nacional/`](sistema-ayuda-nacional/)** — el Nodo Central
   de la arquitectura nacional multi-departamento: reportes vía WhatsApp y
   Ushahidi, auto-activación real por sismos (USGS), export HXL para la
@@ -52,10 +48,10 @@ lat/lon simples mientras tanto, suficiente para el pipeline y los exports.
 ## Cómo contribuir
 
 Cada subproyecto tiene su propio README con instrucciones para levantarlo en
-local y correr sus tests. Si vas a desplegar cualquiera de los dos backends
-para una emergencia real, revisa primero las notas de "próximos pasos
-honestos" en su README — hay datos (contactos, canales) que deben
-reverificarse antes de mostrarse a nadie más.
+local y correr sus tests. Si vas a desplegar el backend para una emergencia
+real, revisa primero las notas de "próximos pasos honestos" en su README —
+hay datos (contactos, canales) que deben reverificarse antes de mostrarse a
+nadie más.
 
 ## Licencia
 

@@ -14,8 +14,13 @@ a las llaves institucionales que esas entidades ya publican. Este proyecto
 se enfoca en lo que sí puede ser fuente primaria: reportes de necesidades,
 coordinación entre centros, recursos en especie.
 
-Es independiente de [`pereira-ayuda-backend/`](../pereira-ayuda-backend/)
-(el MVP acotado a una sola ciudad) — no lo reemplaza ni depende de él.
+Este backend cubre Pereira (como el centro `risaralda-pereira`) además de
+Chocó, Caldas y Valle del Cauca — es el único backend del proyecto. Hubo un
+prototipo anterior acotado solo a Pereira; se retiró cuando este sistema
+nacional lo superó en todo (verificación, envíos, colectivos, mapa, alertas)
+sin perder nada — los 2 canales oficiales que tenía de más (Cruz Roja
+Pereira, banco de sangre del Hospital San Jorge) ya están sembrados acá como
+`Colectivo` verificados.
 
 ## Qué es real y qué es sandbox
 
@@ -171,10 +176,11 @@ fuente.
 
 ## Próximos pasos honestos
 
-- **Nodos Locales offline-first** (React/Vite + SQLite/IndexedDB con sync)
-  — siguiente fase, este Nodo Central es su prerrequisito.
+- **Nodo Local offline-first** ya existe — ver [`nodo-local/`](../nodo-local/)
+  (React/Vite + IndexedDB con sync). Este backend es su prerrequisito y ya
+  está cubierto.
 - **Capas WMS/WFS reales** (GeoServer + PostGIS vivo) para integrar con
-  ICDE/SNIGRD — este build usa lat/lon simples, suficiente para el pipeline
-  y los exports, pero no un servidor geoespacial real.
+  ICDE/SNIGRD — este build usa lat/lon simples, suficiente para el pipeline,
+  el mapa y los exports, pero no un servidor geoespacial real.
 - Migrar de SQLite a Postgres (`DATABASE_URL`) antes de cualquier volumen
   de producción real.

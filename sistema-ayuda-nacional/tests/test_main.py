@@ -263,6 +263,8 @@ def test_resumen_nacional_agrega_a_traves_de_todos_los_centros(client):
     pereira = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
     choco = next(c for c in centros if c["id_territorio"] == "choco")
 
+    resumen_antes = client.get("/api/v1/resumen").json()
+
     r1 = client.post("/api/v1/reportes", json={"contenido": "Sin agua potable"}).json()
     r2 = client.post("/api/v1/reportes", json={"contenido": "Sin comida hace dias"}).json()
     client.post(f"/api/v1/reportes/{r1['id']}/verificar", json={"centro_id": pereira["id"]})
@@ -281,7 +283,7 @@ def test_resumen_nacional_agrega_a_traves_de_todos_los_centros(client):
     assert resumen["total_centros"] == 4
     assert resumen["total_reportes"] == 2
     assert resumen["total_solicitudes_pendientes"] == 2
-    assert resumen["total_colectivos_verificados"] == 1
+    assert resumen["total_colectivos_verificados"] == resumen_antes["total_colectivos_verificados"] + 1
     assert resumen["total_envios_verificados_en_camino"] == 1
 
 
