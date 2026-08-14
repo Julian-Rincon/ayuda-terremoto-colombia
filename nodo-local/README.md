@@ -73,8 +73,9 @@ src/
 ├── sync.js              # motor de sincronización (flush del outbox)
 ├── hooks/useOnlineStatus.js
 └── components/
-    ├── NavPublica.jsx          # pestañas: Inicio / Reportar / Registrarme / Coordinador
+    ├── NavPublica.jsx          # pestañas: Inicio / Mapa / Reportar / Registrarme / Coordinador
     ├── Inicio.jsx              # panorama nacional público, sin login
+    ├── MapaNacional.jsx        # mapa interactivo (Leaflet), sin login
     ├── ReportarPublico.jsx     # reportar una necesidad, sin login
     ├── RegistrarColectivo.jsx  # registrarse como voluntario/colectivo, sin login
     ├── Login.jsx               # login de coordinador (por centro)
@@ -97,6 +98,17 @@ entienda el sistema de un vistazo.
 offline-first que el resto de la app: la acción se guarda primero en el
 `outbox` local y se sincroniza apenas hay conexión, así que reportar o
 registrarse como voluntario funciona incluso sin señal.
+
+## Mapa nacional
+
+`MapaNacional.jsx` usa **Leaflet + OpenStreetMap** — gratis, sin llave de
+API, coherente con que el proyecto es 100% código abierto. Muestra los 4
+centros territoriales (con su conteo de necesidades pendientes), los
+reportes que tienen coordenadas (color por urgencia; los que aún no tiene
+confirmación humana se ven más tenues), y el último sismo detectado por
+USGS si hay uno. A diferencia del resto de la app, **el mapa necesita
+conexión** — las imágenes del mapa no se pueden cachear para verlo offline
+en esta versión.
 
 ## Envíos en camino
 

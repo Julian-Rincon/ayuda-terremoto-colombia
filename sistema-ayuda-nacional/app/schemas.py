@@ -14,6 +14,8 @@ class CentroLocalOut(BaseModel):
     contacto: Optional[str]
     contacto_verificado: bool
     activo: bool
+    lat: Optional[float]
+    lon: Optional[float]
 
     class Config:
         from_attributes = True

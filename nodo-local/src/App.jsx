@@ -4,6 +4,7 @@ import { sincronizarPendientes } from './sync.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
 import NavPublica from './components/NavPublica.jsx'
 import Inicio from './components/Inicio.jsx'
+import MapaNacional from './components/MapaNacional.jsx'
 import ReportarPublico from './components/ReportarPublico.jsx'
 import RegistrarColectivo from './components/RegistrarColectivo.jsx'
 import Login from './components/Login.jsx'
@@ -55,6 +56,7 @@ export default function App() {
       <NavPublica vista={vista} onCambiarVista={setVista} />
 
       {vista === 'inicio' && <Inicio />}
+      {vista === 'mapa' && <MapaNacional />}
       {vista === 'reportar' && <ReportarPublico />}
       {vista === 'registrarme' && <RegistrarColectivo />}
       {vista === 'coordinador' &&

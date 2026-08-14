@@ -59,3 +59,11 @@ export function crearColectivo(payload) {
     body: JSON.stringify(payload),
   })
 }
+
+export function obtenerReportes() {
+  return solicitar('/api/v1/reportes')
+}
+
+export function obtenerUltimoEventoSismico() {
+  return solicitar('/api/v1/eventos-sismicos/ultimo')
+}

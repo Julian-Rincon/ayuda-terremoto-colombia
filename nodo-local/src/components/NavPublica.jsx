@@ -1,5 +1,6 @@
 const PESTANAS = [
   { valor: 'inicio', etiqueta: 'Inicio' },
+  { valor: 'mapa', etiqueta: 'Mapa' },
   { valor: 'reportar', etiqueta: 'Reportar una necesidad' },
   { valor: 'registrarme', etiqueta: 'Registrarme para ayudar' },
   { valor: 'coordinador', etiqueta: 'Soy coordinador' },

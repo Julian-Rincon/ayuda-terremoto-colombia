@@ -21,6 +21,8 @@ CENTROS_SEED = [
         "departamento": "Risaralda",
         "contacto": "(+57) 606 324 8000 — Alcaldía de Pereira, Gestión del Riesgo",
         "contacto_verificado": True,
+        "lat": 4.8133,
+        "lon": -75.6961,
     },
     {
         "id_territorio": "choco",
@@ -28,6 +30,8 @@ CENTROS_SEED = [
         "departamento": "Chocó",
         "contacto": None,
         "contacto_verificado": False,
+        "lat": 5.6947,  # Quibdó, capital departamental — referencia del nodo, no el epicentro
+        "lon": -76.6611,
     },
     {
         "id_territorio": "caldas",
@@ -35,6 +39,8 @@ CENTROS_SEED = [
         "departamento": "Caldas",
         "contacto": None,
         "contacto_verificado": False,
+        "lat": 5.0703,  # Manizales, capital departamental
+        "lon": -75.5138,
     },
     {
         "id_territorio": "valle",
@@ -42,6 +48,8 @@ CENTROS_SEED = [
         "departamento": "Valle del Cauca",
         "contacto": None,
         "contacto_verificado": False,
+        "lat": 3.4516,  # Cali, capital departamental
+        "lon": -76.5320,
     },
 ]
 

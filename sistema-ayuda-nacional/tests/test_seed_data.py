@@ -24,3 +24,11 @@ def test_centros_no_verificados_no_tienen_contacto_inventado(db_session):
 def test_cada_centro_tiene_credencial(db_session):
     seed_data.sembrar_datos_iniciales(db_session)
     assert db_session.query(models.NodoCredencial).count() == 4
+
+
+def test_cada_centro_tiene_coordenadas_para_el_mapa(db_session):
+    seed_data.sembrar_datos_iniciales(db_session)
+    centros = db_session.query(models.CentroLocal).all()
+    for centro in centros:
+        assert centro.lat is not None
+        assert centro.lon is not None

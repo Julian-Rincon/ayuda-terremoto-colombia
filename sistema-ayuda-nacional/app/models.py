@@ -74,6 +74,13 @@ class CentroLocal(Base):
     contacto = Column(String(200), nullable=True)
     contacto_verificado = Column(Boolean, default=False)
     activo = Column(Boolean, default=True)
+
+    # Coordenadas de referencia del nodo (capital departamental) — para el
+    # mapa nacional. No representan un punto exacto de atención, son la
+    # ubicación aproximada de la zona que coordina este centro.
+    lat = Column(Float, nullable=True)
+    lon = Column(Float, nullable=True)
+
     creado_en = Column(DateTime, default=datetime.utcnow)
 
     solicitudes = relationship("Solicitud", back_populates="centro")

@@ -200,3 +200,9 @@
   color: var(--ok);
   border-color: var(--ok);
 }
+
+.mapa-contenedor {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
