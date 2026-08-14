@@ -96,3 +96,119 @@ def clasificar_reporte(descripcion: str) -> dict:
     if resultado is None:
         resultado = _clasificar_por_reglas(descripcion)
     return resultado
+
+
+# ---------------------------------------------------------------------------
+# Resumen de actividad sísmica en lenguaje simple
+#
+# Reformula HECHOS que ya tenemos (magnitud, lugar, fecha) — nunca inventa
+# datos de daños, víctimas ni instrucciones de seguridad. Eso sigue siendo
+# responsabilidad de las fuentes oficiales (SGC, Cruz Roja).
+# ---------------------------------------------------------------------------
+
+def _resumen_sismico_por_reglas(eventos: list[dict]) -> str:
+    if not eventos:
+        return "No hay sismos recientes registrados en la zona."
+    reciente = eventos[0]
+    extra = f" Van {len(eventos)} sismos detectados en los últimos días." if len(eventos) > 1 else ""
+    return f"Sismo de magnitud {reciente['magnitud']} cerca de {reciente['lugar']}.{extra}"
+
+
+def _resumen_sismico_con_groq(eventos: list[dict]) -> Optional[str]:
+    if not GROQ_API_KEY or not eventos:
+        return None
+
+    lista = "\n".join(f"- Magnitud {e['magnitud']}, {e['lugar']}, {e['timestamp']}" for e in eventos)
+    prompt = (
+        "Eres un generador de alertas informativas para un sistema de ayuda humanitaria "
+        "en Colombia, tras el terremoto de agosto 2026. Se te dan datos reales de sismos "
+        "detectados recientemente. Tu única tarea es resumirlos en español sencillo, en "
+        "máximo 40 palabras, para que cualquier persona los entienda.\n\n"
+        "REGLAS ESTRICTAS — nunca las rompas:\n"
+        "- Usa SOLO los datos que se te dan (magnitud, lugar, fecha).\n"
+        "- NUNCA inventes ni menciones daños, víctimas, heridos, ni si es seguro o no.\n"
+        "- NUNCA des instrucciones de seguridad ni recomendaciones de qué hacer.\n"
+        "- Responde SOLO el texto del resumen, sin comillas ni explicaciones.\n\n"
+        f"Datos:\n{lista}"
+    )
+    try:
+        resp = requests.post(
+            GROQ_URL,
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": GROQ_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2,
+                "max_tokens": 150,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        texto = resp.json()["choices"][0]["message"]["content"].strip()
+        return texto or None
+    except Exception:
+        return None
+
+
+def generar_resumen_sismico(eventos: list[dict]) -> dict:
+    """`eventos`: lista de {"magnitud", "lugar", "timestamp"}, más reciente primero."""
+    resumen = _resumen_sismico_con_groq(eventos)
+    if resumen is not None:
+        return {"resumen": resumen, "generado_por_ia": True}
+    return {"resumen": _resumen_sismico_por_reglas(eventos), "generado_por_ia": False}
+
+
+# ---------------------------------------------------------------------------
+# Resumen de necesidades pendientes para un coordinador
+#
+# Igual que arriba: solo reformula los conteos que ya calculó el pipeline,
+# nunca inventa solicitudes, personas ni ubicaciones nuevas.
+# ---------------------------------------------------------------------------
+
+def _resumen_necesidades_por_reglas(centro_nombre: str, pendientes_por_categoria: dict) -> str:
+    if not pendientes_por_categoria:
+        return f"{centro_nombre} no tiene necesidades pendientes registradas ahora mismo."
+    partes = ", ".join(f"{cantidad} de {categoria}" for categoria, cantidad in pendientes_por_categoria.items())
+    return f"{centro_nombre} tiene necesidades pendientes: {partes}."
+
+
+def _resumen_necesidades_con_groq(centro_nombre: str, pendientes_por_categoria: dict) -> Optional[str]:
+    if not GROQ_API_KEY or not pendientes_por_categoria:
+        return None
+
+    lista = ", ".join(f"{cantidad} solicitudes de {categoria}" for categoria, cantidad in pendientes_por_categoria.items())
+    prompt = (
+        "Eres un asistente que ayuda a un coordinador de ayuda humanitaria en Colombia a "
+        f"priorizar su día en el centro '{centro_nombre}'. Se te da el conteo de "
+        "solicitudes pendientes por categoría. Escribe un resumen breve (máximo 35 "
+        "palabras) en español sencillo que le ayude a decidir qué atender primero.\n\n"
+        "REGLAS ESTRICTAS — nunca las rompas:\n"
+        "- Usa SOLO los números que se te dan.\n"
+        "- NUNCA inventes solicitudes, nombres de personas, ni ubicaciones que no se dieron.\n"
+        "- Responde SOLO el texto del resumen, sin comillas ni explicaciones.\n\n"
+        f"Datos: {lista}"
+    )
+    try:
+        resp = requests.post(
+            GROQ_URL,
+            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+            json={
+                "model": GROQ_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2,
+                "max_tokens": 150,
+            },
+            timeout=10,
+        )
+        resp.raise_for_status()
+        texto = resp.json()["choices"][0]["message"]["content"].strip()
+        return texto or None
+    except Exception:
+        return None
+
+
+def generar_resumen_necesidades(centro_nombre: str, pendientes_por_categoria: dict) -> dict:
+    resumen = _resumen_necesidades_con_groq(centro_nombre, pendientes_por_categoria)
+    if resumen is not None:
+        return {"resumen": resumen, "generado_por_ia": True}
+    return {"resumen": _resumen_necesidades_por_reglas(centro_nombre, pendientes_por_categoria), "generado_por_ia": False}

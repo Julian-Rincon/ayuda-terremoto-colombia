@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import * as api from '../api.js'
+import AlertaSismica from './AlertaSismica.jsx'
 
 export default function Inicio() {
   const [resumen, setResumen] = useState(null)
@@ -24,6 +25,8 @@ export default function Inicio() {
         panorama se actualiza con lo que reportan las comunidades y confirman los coordinadores en cada zona — no
         maneja donaciones ni dinero.
       </p>
+
+      <AlertaSismica />
 
       {error && <p className="error">{error}</p>}
 

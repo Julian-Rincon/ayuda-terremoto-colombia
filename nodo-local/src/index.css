@@ -8,6 +8,7 @@
   --accent-contrast: #ffffff;
   --ok: #1a8f5c;
   --error: #c0392b;
+  --warning: #d9822b;
 
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);

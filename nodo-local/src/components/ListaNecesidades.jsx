@@ -7,6 +7,7 @@ export default function ListaNecesidades({ sesion, enLinea, onAccionEncolada }) 
   const [necesidades, setNecesidades] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [mensaje, setMensaje] = useState(null)
+  const [resumenIA, setResumenIA] = useState(null)
 
   useEffect(() => {
     let activo = true
@@ -22,6 +23,10 @@ export default function ListaNecesidades({ sesion, enLinea, onAccionEncolada }) 
           const cache = await db.obtenerNecesidadesCache(sesion.centroId)
           if (activo) setNecesidades(cache)
         }
+        api
+          .obtenerResumenNecesidadesIA(sesion.centroId)
+          .then((datos) => activo && setResumenIA(datos))
+          .catch(() => {})
       } else {
         const cache = await db.obtenerNecesidadesCache(sesion.centroId)
         if (activo) setNecesidades(cache)
@@ -54,6 +59,12 @@ export default function ListaNecesidades({ sesion, enLinea, onAccionEncolada }) 
   return (
     <div className="necesidades">
       <h2>Necesidades pendientes ({necesidades.total_pendientes})</h2>
+      {resumenIA && (
+        <p className="resumen-ia">
+          {resumenIA.resumen}
+          <span className="etiqueta-estado">{resumenIA.generado_por_ia ? 'resumen por IA' : 'resumen automático'}</span>
+        </p>
+      )}
       {categorias.length === 0 && <p>No hay solicitudes pendientes en este centro.</p>}
       <ul>
         {categorias.map(([categoria, cantidad]) => (

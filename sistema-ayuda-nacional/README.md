@@ -52,12 +52,13 @@ Abre `http://localhost:8000/docs` — Swagger UI interactivo, prueba todo desde 
 pytest -v
 ```
 
-62 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
+74 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
 validación de firma de webhooks, siembra de datos (sin contactos
 inventados), pipeline de priorización, export HXL, USGS (umbral de
 activación, dedup, resiliencia a fallos de red), WhatsApp y Ushahidi
 (sandbox), detección de duplicados, envíos en camino, colectivos/voluntarios,
-resumen nacional, y la app FastAPI completa end-to-end.
+resumen nacional, alertas sísmicas y resúmenes con IA, y la app FastAPI
+completa end-to-end.
 
 ## Endpoints principales
 
@@ -74,6 +75,9 @@ resumen nacional, y la app FastAPI completa end-to-end.
 | POST | `/sandbox/whatsapp/simular` | Simular un mensaje de WhatsApp entrante |
 | POST | `/api/v1/integraciones/ushahidi/sincronizar` | Sincronizar posts nuevos desde Ushahidi (o fixture) |
 | GET | `/api/v1/eventos-sismicos/ultimo` | Último evento sísmico detectado por USGS |
+| GET | `/api/v1/eventos-sismicos?dias=7` | Historial de sismos recientes (no solo el último) |
+| GET | `/api/v1/eventos-sismicos/alerta` | Resumen en lenguaje simple de la actividad sísmica (IA + fallback) |
+| GET | `/api/v1/centros/{id}/necesidades/resumen-ia` | Resumen para el coordinador de qué atender primero (IA + fallback) |
 | GET | `/api/v1/sitrep.csv?formato=hxl` | Export HXL para HDX / ONG internacionales |
 | POST | `/api/v1/envios` | Registrar un envío de recursos en especie hacia un centro (queda sin verificar) |
 | GET | `/api/v1/envios?centro_id=&categoria=&estado=&verificado=` | Listar envíos, filtrable |
@@ -129,6 +133,30 @@ problema clásico de similitud de texto, no de razonamiento, y un modelo de
 lenguaje acá sería más lento, más caro y menos auditable que un algoritmo
 determinístico. Nunca se fusiona ni se descarta nada automáticamente — el
 campo solo alimenta la cola de verificación humana (`app/dedup.py`).
+
+## Alerta sísmica y resúmenes con IA
+
+El feed de USGS pasó de `significant_hour` (solo sismos de relevancia
+global) a `2.5_hour` (todo sismo M≥2.5 en el mundo, filtrado a Colombia
+acá) — la réplica real de magnitud 4.2-4.3 en Chocó del 13 de agosto de
+2026 nunca habría aparecido en el feed anterior. `GET
+/api/v1/eventos-sismicos` guarda el historial completo, no solo el último
+evento, para ver la secuencia de réplicas.
+
+Dos lugares usan Groq para generar texto en español sencillo a partir de
+datos que el sistema ya tiene (`app/ai_helper.py`):
+- **Alerta sísmica** (`/eventos-sismicos/alerta`): resume la actividad
+  sísmica reciente.
+- **Resumen para el coordinador** (`/centros/{id}/necesidades/resumen-ia`):
+  ayuda a decidir qué atender primero.
+
+Ambos con reglas estrictas en el prompt — **nunca inventan daños,
+víctimas ni instrucciones de seguridad**, solo reformulan los hechos que
+ya están en la base de datos — y con el mismo fallback por plantilla que
+`clasificar_reporte` si Groq falla o no hay llave configurada
+(`generado_por_ia` en la respuesta indica cuál se usó). El resumen siempre
+viene acompañado de los datos crudos en los que se basa, nunca reemplaza la
+fuente.
 
 ## Seguridad y confianza
 

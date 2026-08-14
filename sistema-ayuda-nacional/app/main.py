@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
@@ -7,7 +8,7 @@ from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import Session
 
 from . import auth, dedup, models, pipeline, schemas, seed_data
-from .ai_helper import clasificar_reporte
+from .ai_helper import clasificar_reporte, generar_resumen_necesidades, generar_resumen_sismico
 from .database import Base, engine, get_db
 from .hxl_export import generar_sitrep_hxl
 from .integrations import usgs, whatsapp
@@ -105,6 +106,34 @@ def necesidades_centro(centro_id: int, db: Session = Depends(get_db)):
         pendientes_por_categoria=conteo,
         total_pendientes=len(pendientes),
         envios_verificados_por_categoria=conteo_envios,
+    )
+
+
+@app.get("/api/v1/centros/{centro_id}/necesidades/resumen-ia", response_model=schemas.ResumenNecesidadesIA)
+def resumen_necesidades_ia(centro_id: int, db: Session = Depends(get_db)):
+    """
+    Resumen en lenguaje simple para que un coordinador priorice su día (Groq,
+    con fallback por plantilla). Solo reformula los conteos ya calculados —
+    nunca inventa solicitudes, personas ni ubicaciones nuevas.
+    """
+    centro = db.query(models.CentroLocal).get(centro_id)
+    if not centro:
+        raise HTTPException(404, "Centro no encontrado")
+
+    pendientes = (
+        db.query(models.Solicitud)
+        .filter(models.Solicitud.centro_id == centro_id, models.Solicitud.estado == models.EstadoSolicitud.pendiente)
+        .all()
+    )
+    conteo: dict[str, int] = {}
+    for s in pendientes:
+        conteo[s.categoria.value] = conteo.get(s.categoria.value, 0) + 1
+
+    resultado = generar_resumen_necesidades(centro.nombre, conteo)
+    return schemas.ResumenNecesidadesIA(
+        centro_id=centro_id,
+        resumen=resultado["resumen"],
+        generado_por_ia=resultado["generado_por_ia"],
     )
 
 
@@ -432,6 +461,41 @@ def ultimo_evento_sismico(db: Session = Depends(get_db)):
         db.query(models.EventoSismico)
         .order_by(models.EventoSismico.timestamp.desc())
         .first()
+    )
+
+
+@app.get("/api/v1/eventos-sismicos", response_model=List[schemas.EventoSismicoOut])
+def listar_eventos_sismicos(dias: int = 7, db: Session = Depends(get_db)):
+    """Historial reciente — no solo el último, para ver la secuencia de réplicas."""
+    desde = datetime.utcnow() - timedelta(days=dias)
+    return (
+        db.query(models.EventoSismico)
+        .filter(models.EventoSismico.timestamp >= desde)
+        .order_by(models.EventoSismico.timestamp.desc())
+        .all()
+    )
+
+
+@app.get("/api/v1/eventos-sismicos/alerta", response_model=schemas.AlertaSismica)
+def alerta_sismica(dias: int = 7, db: Session = Depends(get_db)):
+    """
+    Resumen en lenguaje simple de la actividad sísmica reciente (Groq, con
+    fallback por plantilla). Nunca inventa datos de daños o seguridad — solo
+    reformula los eventos reales que ya tenemos registrados.
+    """
+    desde = datetime.utcnow() - timedelta(days=dias)
+    eventos = (
+        db.query(models.EventoSismico)
+        .filter(models.EventoSismico.timestamp >= desde)
+        .order_by(models.EventoSismico.timestamp.desc())
+        .all()
+    )
+    datos = [{"magnitud": e.magnitud, "lugar": e.lugar or "ubicación sin especificar", "timestamp": e.timestamp.isoformat()} for e in eventos]
+    resultado = generar_resumen_sismico(datos)
+    return schemas.AlertaSismica(
+        resumen=resultado["resumen"],
+        generado_por_ia=resultado["generado_por_ia"],
+        eventos=eventos,
     )
 
 

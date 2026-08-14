@@ -206,3 +206,69 @@
   border-radius: 8px;
   overflow: hidden;
 }
+
+.alerta-sismica {
+  border: 1px solid var(--warning);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+  background: var(--surface);
+}
+
+.alerta-sismica-encabezado {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.alerta-sismica-encabezado p {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.alerta-sismica-icono {
+  color: var(--warning);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.alerta-sismica button {
+  background: transparent;
+  color: var(--warning);
+  border: 1px solid var(--warning);
+  font-size: 12px;
+  padding: 4px 10px;
+  margin-top: 4px;
+}
+
+.alerta-sismica ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.alerta-sismica li {
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+}
+
+.alerta-sismica-fuente {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 10px;
+}
+
+.resumen-ia {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}

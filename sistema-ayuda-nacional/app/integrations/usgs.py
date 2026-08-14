@@ -15,7 +15,12 @@ from ..websocket_manager import manager
 
 logger = logging.getLogger("integraciones.usgs")
 
-USGS_FEED_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/significant_hour.geojson"
+# El feed "significant" de USGS solo trae sismos de relevancia global — una
+# réplica regional de magnitud 4 (como la real del 13 de agosto de 2026 en
+# Chocó) nunca aparece ahí. "2.5_hour" trae todo sismo M≥2.5 en el mundo;
+# el filtro de Colombia en _esta_en_colombia() se encarga de quedarse solo
+# con lo relevante para este sistema.
+USGS_FEED_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_hour.geojson"
 MAGNITUD_UMBRAL_EMERGENCIA = 6.0
 INTERVALO_SEGUNDOS = 60
 

@@ -64,6 +64,14 @@ export function obtenerReportes() {
   return solicitar('/api/v1/reportes')
 }
 
-export function obtenerUltimoEventoSismico() {
-  return solicitar('/api/v1/eventos-sismicos/ultimo')
+export function obtenerEventosSismicos() {
+  return solicitar('/api/v1/eventos-sismicos')
+}
+
+export function obtenerAlertaSismica() {
+  return solicitar('/api/v1/eventos-sismicos/alerta')
+}
+
+export function obtenerResumenNecesidadesIA(centroId) {
+  return solicitar(`/api/v1/centros/${centroId}/necesidades/resumen-ia`)
 }

@@ -15,7 +15,7 @@ const COLOR_URGENCIA = {
 export default function MapaNacional() {
   const [centros, setCentros] = useState([])
   const [reportes, setReportes] = useState([])
-  const [ultimoSismo, setUltimoSismo] = useState(null)
+  const [sismos, setSismos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
 
@@ -26,10 +26,10 @@ export default function MapaNacional() {
       setCargando(true)
       setError(null)
       try {
-        const [listaCentros, listaReportes, sismo] = await Promise.all([
+        const [listaCentros, listaReportes, listaSismos] = await Promise.all([
           api.listarCentros(),
           api.obtenerReportes(),
-          api.obtenerUltimoEventoSismico(),
+          api.obtenerEventosSismicos(),
         ])
 
         const centrosConNecesidades = await Promise.all(
@@ -48,7 +48,7 @@ export default function MapaNacional() {
         if (!activo) return
         setCentros(centrosConNecesidades)
         setReportes(listaReportes.filter((r) => r.lat != null && r.lon != null))
-        setUltimoSismo(sismo)
+        setSismos(listaSismos)
       } catch {
         if (activo) setError('No se pudo cargar el mapa. ¿Hay conexión?')
       } finally {
@@ -66,9 +66,9 @@ export default function MapaNacional() {
     <div className="mapa-nacional">
       <h1>Mapa del sistema</h1>
       <p className="ayuda">
-        Los círculos azules son los centros de coordinación. Los puntos de colores son necesidades reportadas — rojo
-        es urgente, naranja es media. Si hay un sismo detectado, aparece marcado como el epicentro. Toca cualquier
-        punto para ver el detalle antes de mandar o mirar ayuda.
+        Los círculos morados son los centros de coordinación. Los puntos de colores son necesidades reportadas — rojo
+        es urgente, naranja es media. Los círculos rojos grandes son sismos detectados en los últimos días (entre
+        más grande, mayor la magnitud). Toca cualquier punto para ver el detalle antes de mandar o mirar ayuda.
       </p>
 
       {error && <p className="error">{error}</p>}
@@ -121,19 +121,22 @@ export default function MapaNacional() {
               </CircleMarker>
             ))}
 
-            {ultimoSismo && (
+            {sismos.map((s) => (
               <CircleMarker
-                center={[ultimoSismo.lat, ultimoSismo.lon]}
-                radius={14}
-                pathOptions={{ color: '#c0392b', fillColor: '#c0392b', fillOpacity: 0.2, weight: 2 }}
+                key={`sismo-${s.id}`}
+                center={[s.lat, s.lon]}
+                radius={8 + s.magnitud * 2}
+                pathOptions={{ color: '#c0392b', fillColor: '#c0392b', fillOpacity: 0.15, weight: 2 }}
               >
                 <Popup>
-                  <strong>Sismo detectado</strong>
+                  <strong>Sismo — magnitud {s.magnitud}</strong>
                   <br />
-                  Magnitud {ultimoSismo.magnitud} — {ultimoSismo.lugar}
+                  {s.lugar}
+                  <br />
+                  {new Date(s.timestamp).toLocaleString('es-CO')}
                 </Popup>
               </CircleMarker>
-            )}
+            ))}
           </MapContainer>
         </div>
       )}

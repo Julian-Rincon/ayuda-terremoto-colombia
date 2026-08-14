@@ -75,6 +75,7 @@ src/
 └── components/
     ├── NavPublica.jsx          # pestañas: Inicio / Mapa / Reportar / Registrarme / Coordinador
     ├── Inicio.jsx              # panorama nacional público, sin login
+    ├── AlertaSismica.jsx       # resumen de actividad sísmica reciente (IA + fallback)
     ├── MapaNacional.jsx        # mapa interactivo (Leaflet), sin login
     ├── ReportarPublico.jsx     # reportar una necesidad, sin login
     ├── RegistrarColectivo.jsx  # registrarse como voluntario/colectivo, sin login
@@ -105,10 +106,22 @@ registrarse como voluntario funciona incluso sin señal.
 API, coherente con que el proyecto es 100% código abierto. Muestra los 4
 centros territoriales (con su conteo de necesidades pendientes), los
 reportes que tienen coordenadas (color por urgencia; los que aún no tiene
-confirmación humana se ven más tenues), y el último sismo detectado por
-USGS si hay uno. A diferencia del resto de la app, **el mapa necesita
-conexión** — las imágenes del mapa no se pueden cachear para verlo offline
-en esta versión.
+confirmación humana se ven más tenues), y todos los sismos detectados
+recientemente por USGS (círculo más grande = mayor magnitud). A diferencia
+del resto de la app, **el mapa necesita conexión** — las imágenes del mapa
+no se pueden cachear para verlo offline en esta versión.
+
+## Alerta sísmica
+
+`AlertaSismica.jsx` (en Inicio) consulta `GET /api/v1/eventos-sismicos/alerta`
+del Nodo Central y muestra un resumen en español sencillo de la actividad
+sísmica reciente, generado con Groq (gratis) cuando hay llave configurada,
+o con una plantilla determinística si no — nunca inventa daños ni
+instrucciones de seguridad, y siempre remite a fuentes oficiales (SGC, Cruz
+Roja) para eso. Solo aparece si hay sismos registrados en los últimos 7
+días; si no hay ninguno, no se muestra nada. El panel del coordinador
+(`ListaNecesidades.jsx`) tiene el mismo patrón para un resumen de qué
+atender primero.
 
 ## Envíos en camino
 

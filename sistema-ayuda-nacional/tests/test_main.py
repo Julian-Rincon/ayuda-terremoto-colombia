@@ -49,6 +49,7 @@ def client(monkeypatch):
     seed_session.close()
 
     with TestClient(app) as test_client:
+        test_client.db_sessionmaker = TestingSessionLocal  # para sembrar datos sin endpoint (ej. EventoSismico)
         yield test_client
     app.dependency_overrides.clear()
 
@@ -303,3 +304,88 @@ def test_eventos_sismicos_ultimo_sin_eventos_responde_null(client):
     resp = client.get("/api/v1/eventos-sismicos/ultimo")
     assert resp.status_code == 200
     assert resp.json() is None
+
+
+def _sembrar_evento_sismico(client, id_externo, magnitud, lugar, hace_horas=1):
+    from datetime import datetime, timedelta
+
+    from app import models
+
+    db = client.db_sessionmaker()
+    evento = models.EventoSismico(
+        id_externo=id_externo,
+        magnitud=magnitud,
+        profundidad=100.0,
+        lat=4.9,
+        lon=-76.3,
+        lugar=lugar,
+        fuente="usgs",
+        timestamp=datetime.utcnow() - timedelta(hours=hace_horas),
+        activo_modo_emergencia=magnitud >= 6.0,
+    )
+    db.add(evento)
+    db.commit()
+    db.close()
+
+
+def test_listar_eventos_sismicos_ordena_del_mas_reciente(client):
+    _sembrar_evento_sismico(client, "us_test_1", 4.2, "San José del Palmar, Chocó", hace_horas=48)
+    _sembrar_evento_sismico(client, "us_test_2", 4.3, "San José del Palmar, Chocó", hace_horas=1)
+
+    resp = client.get("/api/v1/eventos-sismicos")
+    data = resp.json()
+    assert resp.status_code == 200
+    assert len(data) == 2
+    assert data[0]["id_externo"] == "us_test_2"
+
+
+def test_listar_eventos_sismicos_respeta_ventana_de_dias(client):
+    _sembrar_evento_sismico(client, "us_test_viejo", 4.0, "Chocó", hace_horas=24 * 30)
+
+    resp = client.get("/api/v1/eventos-sismicos?dias=7")
+    assert resp.json() == []
+
+
+def test_alerta_sismica_sin_eventos(client):
+    resp = client.get("/api/v1/eventos-sismicos/alerta")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "No hay sismos recientes" in data["resumen"]
+    assert data["generado_por_ia"] is False
+    assert data["eventos"] == []
+
+
+def test_alerta_sismica_con_eventos_usa_fallback_por_reglas(client):
+    _sembrar_evento_sismico(client, "us_test_3", 4.3, "San José del Palmar, Chocó", hace_horas=2)
+
+    resp = client.get("/api/v1/eventos-sismicos/alerta")
+    data = resp.json()
+    assert resp.status_code == 200
+    assert "4.3" in data["resumen"]
+    assert data["generado_por_ia"] is False
+    assert len(data["eventos"]) == 1
+
+
+def test_resumen_necesidades_ia_sin_pendientes(client):
+    centros = client.get("/api/v1/centros").json()
+    centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+
+    resp = client.get(f"/api/v1/centros/{centro['id']}/necesidades/resumen-ia")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["generado_por_ia"] is False
+    assert "no tiene necesidades pendientes" in data["resumen"]
+
+
+def test_resumen_necesidades_ia_con_pendientes(client):
+    centros = client.get("/api/v1/centros").json()
+    centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+
+    creado = client.post("/api/v1/reportes", json={"contenido": "Sin agua potable urgente"}).json()
+    client.post(f"/api/v1/reportes/{creado['id']}/verificar", json={"centro_id": centro["id"]})
+
+    resp = client.get(f"/api/v1/centros/{centro['id']}/necesidades/resumen-ia")
+    data = resp.json()
+    assert resp.status_code == 200
+    assert "agua" in data["resumen"]
+    assert data["generado_por_ia"] is False

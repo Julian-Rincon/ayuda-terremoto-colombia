@@ -139,6 +139,18 @@ class EventoSismicoOut(BaseModel):
         from_attributes = True
 
 
+class AlertaSismica(BaseModel):
+    resumen: str
+    generado_por_ia: bool
+    eventos: list[EventoSismicoOut]
+
+
+class ResumenNecesidadesIA(BaseModel):
+    centro_id: int
+    resumen: str
+    generado_por_ia: bool
+
+
 class ResumenNacional(BaseModel):
     total_centros: int
     total_reportes: int
