@@ -44,7 +44,8 @@ source .venv/bin/activate  # en Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 cp .env.example .env
-# opcional: pega tu GROQ_API_KEY en .env si quieres clasificación por LLM real
+# opcional: pega tu GROQ_API_KEY en .env si quieres clasificación y
+# resúmenes (alerta sísmica, resumen del coordinador) por LLM real
 
 uvicorn app.main:app --reload
 ```
@@ -57,13 +58,13 @@ Abre `http://localhost:8000/docs` — Swagger UI interactivo, prueba todo desde 
 pytest -v
 ```
 
-74 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
+76 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
 validación de firma de webhooks, siembra de datos (sin contactos
-inventados), pipeline de priorización, export HXL, USGS (umbral de
-activación, dedup, resiliencia a fallos de red), WhatsApp y Ushahidi
-(sandbox), detección de duplicados, envíos en camino, colectivos/voluntarios,
-resumen nacional, alertas sísmicas y resúmenes con IA, y la app FastAPI
-completa end-to-end.
+inventados, incluyendo los colectivos oficiales verificados), pipeline de
+priorización, export HXL, USGS (umbral de activación, dedup, resiliencia a
+fallos de red), WhatsApp y Ushahidi (sandbox), detección de duplicados,
+envíos en camino, colectivos/voluntarios, resumen nacional, alertas
+sísmicas y resúmenes con IA, y la app FastAPI completa end-to-end.
 
 ## Endpoints principales
 

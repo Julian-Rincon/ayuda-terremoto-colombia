@@ -30,12 +30,16 @@ voluntario, damnificado o para un subsidio — ver la nota de seguridad en
   confianza.
 - **[`sistema-ayuda-nacional/`](sistema-ayuda-nacional/)** — el Nodo Central
   de la arquitectura nacional multi-departamento: reportes vía WhatsApp y
-  Ushahidi, auto-activación real por sismos (USGS), export HXL para la
-  comunidad humanitaria internacional. Ver su README para el detalle de qué
-  integraciones son reales y cuáles corren en modo sandbox.
+  Ushahidi, colectivos/voluntarios, envíos en especie, detección de
+  duplicados, alerta sísmica en tiempo real (USGS) con resúmenes por IA
+  (Groq, gratis), export HXL para la comunidad humanitaria internacional.
+  Ver su README para el detalle de qué integraciones son reales y cuáles
+  corren en modo sandbox.
 - **[`nodo-local/`](nodo-local/)** — app offline-first (React/Vite +
-  IndexedDB) para que un centro territorial registre reportes y entregas sin
-  conexión y sincronice todo apenas vuelva la señal. Habla con
+  IndexedDB) con dos caras: un portal público (panorama nacional, mapa
+  interactivo, reportar, registrarse como voluntario, todo sin login) y un
+  panel de coordinador por centro territorial que sigue funcionando sin
+  conexión y sincroniza todo apenas vuelva la señal. Habla con
   `sistema-ayuda-nacional/`.
 
 ## Qué falta (honesto)
