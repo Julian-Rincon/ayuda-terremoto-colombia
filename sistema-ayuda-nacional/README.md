@@ -7,8 +7,7 @@ del 10 de agosto de 2026, con auto-activación real cuando USGS detecta un
 sismo fuerte en el país.
 
 **Este sistema no maneja donaciones ni pagos.** Es una decisión de diseño
-deliberada (ver `docs/superpowers/specs/2026-08-13-sistema-ayuda-nacional-design.md`
-en la raíz del repo): un sistema que toca dinero real es el punto de mayor
+deliberada: un sistema que toca dinero real es el punto de mayor
 riesgo reputacional si algo falla. El dinero sigue fluyendo por los canales
 reales que ya existen — Cruz Roja, ABACO, Bancos de Alimentos, Bre-B directo
 a las llaves institucionales que esas entidades ya publican. Este proyecto

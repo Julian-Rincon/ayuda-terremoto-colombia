@@ -242,7 +242,7 @@ Clase CentroLocal:
 
 ---
 
-## 6. Especificación de API REST (para generar en Claude Code)
+## 6. Especificación de API REST (para generar con un agente de código)
 
 Endpoints mínimos del **Nodo Central**, pensados para FastAPI (coherente con tu stack de Chinook/ShopStream):
 
@@ -307,7 +307,7 @@ Cualquier sistema que construyas debe:
 1. **Esta semana**: levantar una instancia Docker de Ushahidi y probar su API con datos simulados de Pereira/Chocó — es el componente de mayor apalancamiento y menor esfuerzo de construcción propia.
 2. **Solicitar acceso** al Meta WhatsApp Business Cloud API (proceso de verificación de negocio, toma días — empezarlo ya).
 3. **Contactar un banco aliado** (Bancolombia o similar) para entender si su API de recaudo Bre-B está disponible para ONG/proyectos — esto define si la conciliación de donaciones es automática o manual en v1.
-4. **Prototipo con Cloud Code**: usar este `.md` para generar el esquema FastAPI de la sección 6, con mocks para los tres webhooks (WhatsApp, Ushahidi, banco) antes de tener credenciales reales.
+4. **Prototipo asistido**: usar este `.md` para generar el esquema FastAPI de la sección 6, con mocks para los tres webhooks (WhatsApp, Ushahidi, banco) antes de tener credenciales reales.
 5. **Definir con quién coordinas en terreno** — sin un canal institucional (aunque sea informal, vía Cruz Roja seccional Risaralda o la alcaldía de Pereira), el mejor sistema del mundo no mueve un solo bulto de mercado.
 
 ---

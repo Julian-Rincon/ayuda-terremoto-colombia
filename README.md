@@ -41,9 +41,6 @@ voluntario, damnificado o para un subsidio — ver la nota de seguridad en
   IndexedDB) para que un centro territorial registre reportes y entregas sin
   conexión y sincronice todo apenas vuelva la señal. Habla con
   `sistema-ayuda-nacional/`.
-- **`docs/superpowers/`** — specs de diseño y planes de implementación, para
-  quien quiera entender las decisiones de alcance (por ejemplo, por qué no
-  hay manejo de pagos, o qué queda fuera de esta versión).
 
 ## Qué falta (honesto)
 
