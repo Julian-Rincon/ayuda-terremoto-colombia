@@ -87,7 +87,25 @@ def necesidades_centro(centro_id: int, db: Session = Depends(get_db)):
     for s in pendientes:
         conteo[s.categoria.value] = conteo.get(s.categoria.value, 0) + 1
 
-    return schemas.NecesidadesCentro(centro_id=centro_id, pendientes_por_categoria=conteo, total_pendientes=len(pendientes))
+    envios_activos = (
+        db.query(models.Envio)
+        .filter(
+            models.Envio.centro_id == centro_id,
+            models.Envio.verificado.is_(True),
+            models.Envio.estado.in_([models.EstadoEnvio.comprometido, models.EstadoEnvio.en_transito]),
+        )
+        .all()
+    )
+    conteo_envios: dict[str, int] = {}
+    for e in envios_activos:
+        conteo_envios[e.categoria.value] = conteo_envios.get(e.categoria.value, 0) + e.cantidad
+
+    return schemas.NecesidadesCentro(
+        centro_id=centro_id,
+        pendientes_por_categoria=conteo,
+        total_pendientes=len(pendientes),
+        envios_verificados_por_categoria=conteo_envios,
+    )
 
 
 @app.post("/api/v1/centros/{centro_id}/entregas", response_model=schemas.SolicitudOut)
@@ -240,6 +258,78 @@ async def simular_whatsapp(payload: dict, db: Session = Depends(get_db)):
 @app.post("/api/v1/integraciones/ushahidi/sincronizar", response_model=List[schemas.ReporteCiudadanoOut])
 async def sincronizar_ushahidi_endpoint(db: Session = Depends(get_db)):
     return await sincronizar_ushahidi(db)
+
+
+# ---------------------------------------------------------------------------
+# Envíos (recursos en especie en camino — NO dinero, ver spec de diseño)
+# ---------------------------------------------------------------------------
+
+@app.post("/api/v1/envios", response_model=schemas.EnvioOut)
+async def crear_envio(payload: schemas.EnvioCreate, db: Session = Depends(get_db)):
+    centro = db.query(models.CentroLocal).get(payload.centro_id)
+    if not centro:
+        raise HTTPException(404, "Centro no encontrado")
+
+    envio = models.Envio(
+        centro_id=payload.centro_id,
+        categoria=payload.categoria,
+        cantidad=payload.cantidad,
+        origen=payload.origen,
+        notas=payload.notas,
+    )
+    db.add(envio)
+    db.commit()
+    db.refresh(envio)
+    await manager.broadcast("nuevo_envio", schemas.EnvioOut.model_validate(envio).model_dump())
+    return envio
+
+
+@app.get("/api/v1/envios", response_model=List[schemas.EnvioOut])
+def listar_envios(
+    centro_id: Optional[int] = None,
+    categoria: Optional[models.CategoriaNecesidad] = None,
+    estado: Optional[models.EstadoEnvio] = None,
+    verificado: Optional[bool] = None,
+    db: Session = Depends(get_db),
+):
+    query = db.query(models.Envio)
+    if centro_id is not None:
+        query = query.filter(models.Envio.centro_id == centro_id)
+    if categoria:
+        query = query.filter(models.Envio.categoria == categoria)
+    if estado:
+        query = query.filter(models.Envio.estado == estado)
+    if verificado is not None:
+        query = query.filter(models.Envio.verificado == verificado)
+    return query.order_by(models.Envio.creado_en.desc()).all()
+
+
+@app.patch("/api/v1/envios/{envio_id}/verificar", response_model=schemas.EnvioOut)
+async def verificar_envio(envio_id: int, db: Session = Depends(get_db)):
+    """
+    Gate de confianza: un envío NUNCA cuenta como cobertura de una necesidad
+    hasta que un humano coordinador lo confirme explícitamente por acá.
+    """
+    envio = db.query(models.Envio).get(envio_id)
+    if not envio:
+        raise HTTPException(404, "Envío no encontrado")
+    envio.verificado = True
+    db.commit()
+    db.refresh(envio)
+    await manager.broadcast("envio_verificado", schemas.EnvioOut.model_validate(envio).model_dump())
+    return envio
+
+
+@app.patch("/api/v1/envios/{envio_id}/estado", response_model=schemas.EnvioOut)
+async def actualizar_estado_envio(envio_id: int, payload: schemas.EnvioEstadoUpdate, db: Session = Depends(get_db)):
+    envio = db.query(models.Envio).get(envio_id)
+    if not envio:
+        raise HTTPException(404, "Envío no encontrado")
+    envio.estado = payload.estado
+    db.commit()
+    db.refresh(envio)
+    await manager.broadcast("envio_actualizado", schemas.EnvioOut.model_validate(envio).model_dump())
+    return envio
 
 
 # ---------------------------------------------------------------------------

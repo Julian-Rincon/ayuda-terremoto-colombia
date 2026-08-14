@@ -1,17 +1,22 @@
 import { openDB } from 'idb'
 
 const DB_NAME = 'nodo-local-db'
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 let dbPromise = null
 
 function getDb() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
-      upgrade(db) {
-        db.createObjectStore('auth')
-        db.createObjectStore('necesidades_cache')
-        db.createObjectStore('outbox', { keyPath: 'id', autoIncrement: true })
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          db.createObjectStore('auth')
+          db.createObjectStore('necesidades_cache')
+          db.createObjectStore('outbox', { keyPath: 'id', autoIncrement: true })
+        }
+        if (oldVersion < 2) {
+          db.createObjectStore('envios_cache')
+        }
       },
     })
   }
@@ -45,6 +50,18 @@ export async function cachearNecesidades(centroId, data) {
 export async function obtenerNecesidadesCache(centroId) {
   const db = await getDb()
   return (await db.get('necesidades_cache', centroId)) ?? null
+}
+
+// ---------- Cache de envíos en camino por centro (para funcionar sin conexión) ----------
+
+export async function cachearEnvios(centroId, data) {
+  const db = await getDb()
+  await db.put('envios_cache', data, centroId)
+}
+
+export async function obtenerEnviosCache(centroId) {
+  const db = await getDb()
+  return (await db.get('envios_cache', centroId)) ?? null
 }
 
 // ---------- Cola de salida (outbox) — acciones pendientes de sincronizar ----------

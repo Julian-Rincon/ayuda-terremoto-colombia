@@ -44,3 +44,7 @@ export function registrarEntrega(centroId, categoria, token) {
     body: JSON.stringify({ categoria }),
   })
 }
+
+export function obtenerEnvios(centroId) {
+  return solicitar(`/api/v1/envios?centro_id=${centroId}`)
+}

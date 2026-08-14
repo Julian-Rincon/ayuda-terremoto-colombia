@@ -46,6 +46,13 @@ class CanalReporte(str, enum.Enum):
     manual = "manual"
 
 
+class EstadoEnvio(str, enum.Enum):
+    comprometido = "comprometido"  # alguien se comprometió a mandarlo, aún no salió
+    en_transito = "en_transito"  # ya salió, viene en camino
+    entregado = "entregado"  # ya llegó al centro
+    cancelado = "cancelado"
+
+
 class CentroLocal(Base):
     __tablename__ = "centros_locales"
 
@@ -123,6 +130,36 @@ class EventoSismico(Base):
     timestamp = Column(DateTime, nullable=False)
     activo_modo_emergencia = Column(Boolean, default=False)
     creado_en = Column(DateTime, default=datetime.utcnow)
+
+
+class Envio(Base):
+    """
+    Recursos en especie (comida, medicamentos, etc.) que alguien se
+    compromete a mandar hacia un CentroLocal — NUNCA dinero (eso queda
+    fuera de este sistema, ver spec de diseño). `cantidad` es un conteo de
+    unidades/kits, no un monto.
+
+    `verificado` sigue el mismo patrón que ReporteCiudadano: por defecto
+    False, para que nadie pueda inflar falsamente "esto ya viene cubierto"
+    y bajarle prioridad a una necesidad real sin que un humano lo confirme.
+    """
+    __tablename__ = "envios"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    centro_id = Column(Integer, ForeignKey("centros_locales.id"), nullable=False)
+    centro = relationship("CentroLocal")
+
+    categoria = Column(Enum(CategoriaNecesidad), nullable=False, index=True)
+    cantidad = Column(Integer, nullable=False)
+    origen = Column(String(200), nullable=False)  # ej. "Bogotá", "Cruz Roja Nacional"
+    notas = Column(Text, nullable=True)
+
+    estado = Column(Enum(EstadoEnvio), default=EstadoEnvio.comprometido, index=True)
+    verificado = Column(Boolean, default=False)
+
+    creado_en = Column(DateTime, default=datetime.utcnow)
+    actualizado_en = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 
 class NodoCredencial(Base):

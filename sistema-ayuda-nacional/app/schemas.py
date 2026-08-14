@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from .models import CanalReporte, CategoriaNecesidad, EstadoSolicitud, UrgenciaReporte
+from .models import CanalReporte, CategoriaNecesidad, EstadoEnvio, EstadoSolicitud, UrgenciaReporte
 
 
 class CentroLocalOut(BaseModel):
@@ -68,6 +68,35 @@ class NecesidadesCentro(BaseModel):
     centro_id: int
     pendientes_por_categoria: dict[str, int]
     total_pendientes: int
+    envios_verificados_por_categoria: dict[str, int]
+
+
+class EnvioCreate(BaseModel):
+    centro_id: int
+    categoria: CategoriaNecesidad
+    cantidad: int = Field(..., gt=0)
+    origen: str = Field(..., min_length=2)
+    notas: Optional[str] = None
+
+
+class EnvioOut(BaseModel):
+    id: int
+    centro_id: int
+    categoria: CategoriaNecesidad
+    cantidad: int
+    origen: str
+    notas: Optional[str]
+    estado: EstadoEnvio
+    verificado: bool
+    creado_en: datetime
+    actualizado_en: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class EnvioEstadoUpdate(BaseModel):
+    estado: EstadoEnvio
 
 
 class EventoSismicoOut(BaseModel):

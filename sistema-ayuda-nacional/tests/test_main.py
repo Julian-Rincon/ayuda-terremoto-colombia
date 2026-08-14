@@ -148,6 +148,84 @@ def test_reporte_similar_queda_marcado_como_posible_duplicado(client):
     assert segundo["posible_duplicado_de_id"] == primero["id"]
 
 
+def test_crear_envio_queda_sin_verificar_por_defecto(client):
+    centros = client.get("/api/v1/centros").json()
+    centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+
+    resp = client.post("/api/v1/envios", json={
+        "centro_id": centro["id"], "categoria": "alimentos", "cantidad": 50, "origen": "Bogotá",
+    })
+
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["verificado"] is False
+    assert data["estado"] == "comprometido"
+    assert data["cantidad"] == 50
+
+
+def test_envio_sin_verificar_no_cuenta_en_necesidades(client):
+    centros = client.get("/api/v1/centros").json()
+    centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+
+    client.post("/api/v1/envios", json={
+        "centro_id": centro["id"], "categoria": "alimentos", "cantidad": 50, "origen": "Bogotá",
+    })
+
+    necesidades = client.get(f"/api/v1/centros/{centro['id']}/necesidades").json()
+    assert necesidades["envios_verificados_por_categoria"] == {}
+
+
+def test_envio_verificado_si_aparece_en_necesidades(client):
+    centros = client.get("/api/v1/centros").json()
+    centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+
+    envio = client.post("/api/v1/envios", json={
+        "centro_id": centro["id"], "categoria": "alimentos", "cantidad": 50, "origen": "Bogotá",
+    }).json()
+
+    verificado = client.patch(f"/api/v1/envios/{envio['id']}/verificar")
+    assert verificado.status_code == 200
+    assert verificado.json()["verificado"] is True
+
+    necesidades = client.get(f"/api/v1/centros/{centro['id']}/necesidades").json()
+    assert necesidades["envios_verificados_por_categoria"] == {"alimentos": 50}
+
+
+def test_envio_entregado_ya_no_cuenta_como_en_camino(client):
+    centros = client.get("/api/v1/centros").json()
+    centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+
+    envio = client.post("/api/v1/envios", json={
+        "centro_id": centro["id"], "categoria": "medicamentos", "cantidad": 10, "origen": "Cruz Roja Nacional",
+    }).json()
+    client.patch(f"/api/v1/envios/{envio['id']}/verificar")
+
+    actualizado = client.patch(f"/api/v1/envios/{envio['id']}/estado", json={"estado": "entregado"})
+    assert actualizado.status_code == 200
+    assert actualizado.json()["estado"] == "entregado"
+
+    necesidades = client.get(f"/api/v1/centros/{centro['id']}/necesidades").json()
+    assert necesidades["envios_verificados_por_categoria"] == {}
+
+
+def test_listar_envios_filtra_por_centro_y_estado(client):
+    centros = client.get("/api/v1/centros").json()
+    centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+    otro_centro = next(c for c in centros if c["id_territorio"] == "choco")
+
+    client.post("/api/v1/envios", json={
+        "centro_id": centro["id"], "categoria": "agua", "cantidad": 20, "origen": "Bogotá",
+    })
+    client.post("/api/v1/envios", json={
+        "centro_id": otro_centro["id"], "categoria": "agua", "cantidad": 5, "origen": "Cali",
+    })
+
+    resp = client.get(f"/api/v1/envios?centro_id={centro['id']}")
+    envios = resp.json()
+    assert len(envios) == 1
+    assert envios[0]["origen"] == "Bogotá"
+
+
 def test_sitrep_hxl_responde_csv(client):
     resp = client.get("/api/v1/sitrep.csv?formato=hxl")
     assert resp.status_code == 200

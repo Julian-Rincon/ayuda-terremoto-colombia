@@ -56,3 +56,24 @@ def test_evento_sismico_requiere_id_externo_unico(db_session):
     db_session.commit()
     db_session.refresh(evento)
     assert evento.activo_modo_emergencia is True
+
+
+def test_crear_envio_asociado_a_centro(db_session):
+    centro = models.CentroLocal(id_territorio="risaralda-pereira", nombre="Pereira", departamento="Risaralda")
+    db_session.add(centro)
+    db_session.commit()
+    db_session.refresh(centro)
+
+    envio = models.Envio(
+        centro_id=centro.id,
+        categoria=models.CategoriaNecesidad.alimentos,
+        cantidad=50,
+        origen="Bogotá",
+    )
+    db_session.add(envio)
+    db_session.commit()
+    db_session.refresh(envio)
+
+    assert envio.estado == models.EstadoEnvio.comprometido
+    assert envio.verificado is False
+    assert envio.centro.id_territorio == "risaralda-pereira"

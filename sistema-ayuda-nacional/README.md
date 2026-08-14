@@ -53,11 +53,12 @@ Abre `http://localhost:8000/docs` — Swagger UI interactivo, prueba todo desde 
 pytest -v
 ```
 
-42 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
+56 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
 validación de firma de webhooks, siembra de datos (sin contactos
 inventados), pipeline de priorización, export HXL, USGS (umbral de
 activación, dedup, resiliencia a fallos de red), WhatsApp y Ushahidi
-(sandbox), y la app FastAPI completa end-to-end.
+(sandbox), detección de duplicados, envíos en camino, y la app FastAPI
+completa end-to-end.
 
 ## Endpoints principales
 
@@ -75,7 +76,25 @@ activación, dedup, resiliencia a fallos de red), WhatsApp y Ushahidi
 | POST | `/api/v1/integraciones/ushahidi/sincronizar` | Sincronizar posts nuevos desde Ushahidi (o fixture) |
 | GET | `/api/v1/eventos-sismicos/ultimo` | Último evento sísmico detectado por USGS |
 | GET | `/api/v1/sitrep.csv?formato=hxl` | Export HXL para HDX / ONG internacionales |
+| POST | `/api/v1/envios` | Registrar un envío de recursos en especie hacia un centro (queda sin verificar) |
+| GET | `/api/v1/envios?centro_id=&categoria=&estado=&verificado=` | Listar envíos, filtrable |
+| PATCH | `/api/v1/envios/{id}/verificar` | Verificación humana — obligatoria antes de que cuente como cobertura |
+| PATCH | `/api/v1/envios/{id}/estado` | Actualizar estado (`comprometido` → `en_transito` → `entregado`) |
 | WS | `/ws` | Feed de eventos en tiempo real |
+
+## Envíos: evitar que dos sitios manden lo mismo sin saberlo
+
+Cuando alguien se compromete a mandar recursos hacia un centro (ej. "desde
+Bogotá vienen 50 kits de alimentos y 10 de medicamentos"), se registra como
+`Envio` — **cantidad de unidades/kits, nunca dinero**. `GET
+/api/v1/centros/{id}/necesidades` ahora también devuelve
+`envios_verificados_por_categoria`, para que cualquiera vea de un vistazo si
+una necesidad ya tiene cobertura en camino antes de duplicar el esfuerzo.
+
+Mismo gate de confianza que el resto del sistema: un envío nace con
+`verificado=false` y **no cuenta** en `necesidades` hasta que un humano lo
+confirma — si no, cualquiera podría declarar falsamente "esto ya viene
+cubierto" para bajarle prioridad a una necesidad real.
 
 ## Detección de posibles duplicados
 

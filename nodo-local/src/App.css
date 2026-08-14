@@ -84,3 +84,38 @@
 .nueva-solicitud {
   margin-top: 24px;
 }
+
+.envios-en-camino {
+  margin-top: 24px;
+}
+
+.envios-en-camino ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.envios-en-camino li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+.etiqueta-estado {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.etiqueta-estado.verificado {
+  color: var(--ok);
+  border-color: var(--ok);
+}

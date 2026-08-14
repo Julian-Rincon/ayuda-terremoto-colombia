@@ -45,7 +45,7 @@ configurado en el backend.
 npm test
 ```
 
-15 tests con Vitest, sobre la lógica que garantiza que nada se pierde
+17 tests con Vitest, sobre la lógica que garantiza que nada se pierde
 offline: cola de salida (`db.test.js`) y motor de sincronización con
 reintentos (`sync.test.js`), usando `fake-indexeddb` para simular IndexedDB
 en Node sin necesitar un navegador real.
@@ -71,8 +71,20 @@ src/
     ├── Dashboard.jsx
     ├── EstadoConexion.jsx
     ├── ListaNecesidades.jsx
+    ├── EnviosEnCamino.jsx
     └── NuevaSolicitudForm.jsx
 ```
+
+## Envíos en camino
+
+`EnviosEnCamino.jsx` muestra, de solo lectura, qué recursos en especie están
+comprometidos/en tránsito hacia el centro (ej. "50 de alimentos desde
+Bogotá") — consulta `GET /api/v1/envios?centro_id=` del Nodo Central y
+cachea la respuesta en IndexedDB para poder mostrarla offline. Cada envío
+indica si ya fue verificado por un humano o no; registrar/verificar un envío
+nuevo se hace desde el Nodo Central (Swagger o integración de quien
+despacha), no desde esta app — el Nodo Local es la vista del centro que
+recibe, no del que despacha.
 
 ## Limitaciones conocidas
 

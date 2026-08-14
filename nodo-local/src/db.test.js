@@ -40,6 +40,19 @@ describe('cache de necesidades', () => {
   })
 })
 
+describe('cache de envíos', () => {
+  it('guarda y recupera el cache de envíos por centro', async () => {
+    await db.cachearEnvios(1, [{ id: 1, categoria: 'alimentos', cantidad: 50, origen: 'Bogotá' }])
+    const cache = await db.obtenerEnviosCache(1)
+    expect(cache).toHaveLength(1)
+    expect(cache[0].origen).toBe('Bogotá')
+  })
+
+  it('retorna null si no hay cache de envíos para ese centro', async () => {
+    expect(await db.obtenerEnviosCache(99)).toBeNull()
+  })
+})
+
 describe('outbox', () => {
   it('encola una acción como pendiente', async () => {
     const id = await db.encolarAccion('reporte', { contenido: 'Sin agua' })
