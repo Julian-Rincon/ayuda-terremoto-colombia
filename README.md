@@ -1,5 +1,14 @@
 # Ayuda Terremoto Colombia
 
+## 🔗 Demo en vivo
+
+- **Portal público:** https://ayuda-terremoto-portal.onrender.com
+- **API / Swagger:** https://ayuda-terremoto-nacional.onrender.com/docs
+
+Alojado en el tier gratis de Render — si nadie lo visita en 15 minutos se
+"duerme" y el primer request tarda ~30-50s en despertarlo. Es normal, no es
+que esté caído.
+
 Sistema de coordinación de ayuda humanitaria construido tras el terremoto de
 magnitud 7.4 con epicentro cerca de San José del Palmar (Chocó) que sacudió
 el occidente de Colombia el 10 de agosto de 2026, con afectación oficial en
