@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: ayuda-terremoto-nacional
+    runtime: python
+    rootDir: sistema-ayuda-nacional
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODOS_SECRETO_INICIAL
+        generateValue: true
+      - key: DATABASE_URL
+        value: sqlite:///./sistema_ayuda_nacional.db
+      - key: GROQ_API_KEY
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: USHAHIDI_BASE_URL
+        sync: false
