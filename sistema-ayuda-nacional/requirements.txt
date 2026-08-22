@@ -8,5 +8,6 @@ python-dotenv==1.2.2
 websockets==17.0.1
 PyJWT==2.13.0
 bcrypt==5.0.0
+slowapi==0.1.10
 pytest==9.1.1
 pytest-asyncio==1.4.0

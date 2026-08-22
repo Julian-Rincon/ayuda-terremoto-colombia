@@ -173,7 +173,13 @@ fuente.
   Valle) **no tienen contacto inventado** — quedan marcados como pendientes
   de verificación hasta que alguien lo confirme con la entidad real.
 - Cambia `JWT_SECRET` y `NODOS_SECRETO_INICIAL` en `.env` antes de cualquier
-  despliegue real — los valores de ejemplo son solo para desarrollo local.
+  despliegue real — los valores de ejemplo son solo para desarrollo local. Si
+  se te olvida, no pasa nada: con `ENVIRONMENT=production`, la app **se
+  niega a arrancar** mientras sigan con el valor de ejemplo
+  (`app/config_checks.py`).
+- `POST /api/v1/reportes` y `POST /api/v1/colectivos` (los dos endpoints
+  públicos sin autenticación) tienen rate limiting — 10 solicitudes por
+  minuto por IP (`slowapi`, `app/rate_limit.py`).
 
 ## Próximos pasos honestos
 

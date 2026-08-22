@@ -51,11 +51,12 @@ lat/lon simples mientras tanto, suficiente para el pipeline y los exports.
 
 ## Cómo contribuir
 
-Cada subproyecto tiene su propio README con instrucciones para levantarlo en
-local y correr sus tests. Si vas a desplegar el backend para una emergencia
-real, revisa primero las notas de "próximos pasos honestos" en su README —
-hay datos (contactos, canales) que deben reverificarse antes de mostrarse a
-nadie más.
+Ver [`CONTRIBUTING.md`](CONTRIBUTING.md) — reglas del proyecto y cómo
+correr los tests antes de un PR. Cada subproyecto además tiene su propio
+README con instrucciones para levantarlo en local. Si vas a desplegar el
+backend para una emergencia real, revisa primero las notas de "próximos
+pasos honestos" en su README — hay datos (contactos, canales) que deben
+reverificarse antes de mostrarse a nadie más.
 
 ## Licencia
 

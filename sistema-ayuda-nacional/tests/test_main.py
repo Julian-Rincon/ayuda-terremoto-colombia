@@ -9,6 +9,7 @@ from app import seed_data as seed_data_module
 from app.database import Base, get_db
 from app.integrations import usgs
 from app.main import app
+from app.rate_limit import limiter
 
 
 async def _usgs_loop_noop():
@@ -20,6 +21,7 @@ def client(monkeypatch):
     monkeypatch.setattr(ai_helper, "GROQ_API_KEY", "")  # clasificación determinística en tests
     monkeypatch.setenv("NODOS_SECRETO_INICIAL", "cambia-esto-en-produccion")
     monkeypatch.setattr(usgs, "escuchar_usgs_loop", _usgs_loop_noop)  # nunca llamar a la red real en tests
+    limiter.reset()  # cada test empieza con su propio cupo, sin arrastrar el de tests anteriores
 
     engine = create_engine(
         "sqlite:///:memory:",
@@ -75,6 +77,15 @@ def test_crear_reporte_manual_lo_clasifica(client):
     data = resp.json()
     assert data["categoria"] == "refugio"
     assert data["verificado"] is False
+
+
+def test_rate_limit_reportes_bloquea_tras_exceder_el_limite(client):
+    for _ in range(10):
+        resp = client.post("/api/v1/reportes", json={"contenido": "Reporte de prueba de límite"})
+        assert resp.status_code == 200
+
+    excedido = client.post("/api/v1/reportes", json={"contenido": "Este debería quedar bloqueado"})
+    assert excedido.status_code == 429
 
 
 def test_sandbox_whatsapp_simular_crea_reporte(client):
@@ -238,6 +249,15 @@ def test_registrar_colectivo_queda_sin_verificar_por_defecto(client):
     data = resp.json()
     assert data["verificado"] is False
     assert data["tipo"] == "logistica"
+
+
+def test_rate_limit_colectivos_bloquea_tras_exceder_el_limite(client):
+    for i in range(10):
+        resp = client.post("/api/v1/colectivos", json={"nombre": f"Colectivo de prueba {i}"})
+        assert resp.status_code == 200
+
+    excedido = client.post("/api/v1/colectivos", json={"nombre": "Este debería quedar bloqueado"})
+    assert excedido.status_code == 429
 
 
 def test_verificar_colectivo(client):

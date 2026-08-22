@@ -5,15 +5,22 @@ from typing import List, Optional
 from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.orm import Session
 
 from . import auth, dedup, models, pipeline, schemas, seed_data
 from .ai_helper import clasificar_reporte, generar_resumen_necesidades, generar_resumen_sismico
+from .config_checks import verificar_secretos_de_produccion
 from .database import Base, engine, get_db
 from .hxl_export import generar_sitrep_hxl
 from .integrations import usgs, whatsapp
 from .integrations.ushahidi import sincronizar_ushahidi
+from .rate_limit import limiter
 from .websocket_manager import manager
+
+verificar_secretos_de_produccion()
 
 Base.metadata.create_all(bind=engine)
 
@@ -37,6 +44,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 _tarea_usgs: Optional[asyncio.Task] = None
 
@@ -188,7 +199,8 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/v1/reportes", response_model=schemas.ReporteCiudadanoOut)
-async def crear_reporte_manual(payload: schemas.ReporteCiudadanoCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def crear_reporte_manual(request: Request, payload: schemas.ReporteCiudadanoCreate, db: Session = Depends(get_db)):
     clasificacion = clasificar_reporte(payload.contenido)
     reporte = models.ReporteCiudadano(
         canal=payload.canal,
@@ -366,7 +378,8 @@ async def actualizar_estado_envio(envio_id: int, payload: schemas.EnvioEstadoUpd
 # ---------------------------------------------------------------------------
 
 @app.post("/api/v1/colectivos", response_model=schemas.ColectivoOut)
-async def crear_colectivo(payload: schemas.ColectivoCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def crear_colectivo(request: Request, payload: schemas.ColectivoCreate, db: Session = Depends(get_db)):
     """
     Registro público, sin autenticación: cualquier voluntario o colectivo
     puede anotarse. Nace sin verificar — nunca aparece como disponible ni
