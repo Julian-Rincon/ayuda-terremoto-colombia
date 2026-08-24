@@ -71,3 +71,7 @@ reverificarse antes de mostrarse a nadie más.
 
 MIT — ver [`LICENSE`](LICENSE). Úsalo, adáptalo, despliégalo donde haga
 falta.
+
+## Code of Conduct
+
+See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
