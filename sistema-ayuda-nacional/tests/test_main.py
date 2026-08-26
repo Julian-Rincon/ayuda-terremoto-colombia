@@ -208,6 +208,22 @@ def test_crear_envio_queda_sin_verificar_por_defecto(client):
     assert data["cantidad"] == 50
 
 
+def test_rate_limit_envios_bloquea_tras_exceder_el_limite(client):
+    centros = client.get("/api/v1/centros").json()
+    centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+
+    for _ in range(10):
+        resp = client.post("/api/v1/envios", json={
+            "centro_id": centro["id"], "categoria": "alimentos", "cantidad": 1, "origen": "Prueba de límite",
+        })
+        assert resp.status_code == 200
+
+    excedido = client.post("/api/v1/envios", json={
+        "centro_id": centro["id"], "categoria": "alimentos", "cantidad": 1, "origen": "Este debería quedar bloqueado",
+    })
+    assert excedido.status_code == 429
+
+
 def test_envio_sin_verificar_no_cuenta_en_necesidades(client):
     centros = client.get("/api/v1/centros").json()
     centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")

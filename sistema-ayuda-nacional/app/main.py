@@ -330,7 +330,13 @@ async def sincronizar_ushahidi_endpoint(db: Session = Depends(get_db)):
 # ---------------------------------------------------------------------------
 
 @app.post("/api/v1/envios", response_model=schemas.EnvioOut)
-async def crear_envio(payload: schemas.EnvioCreate, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def crear_envio(request: Request, payload: schemas.EnvioCreate, db: Session = Depends(get_db)):
+    """
+    Público y sin autenticación, igual que /reportes y /colectivos — mismo
+    riesgo de spam automatizado, así que lleva el mismo límite de 10/minuto
+    por IP.
+    """
     centro = db.query(models.CentroLocal).get(payload.centro_id)
     if not centro:
         raise HTTPException(404, "Centro no encontrado")
