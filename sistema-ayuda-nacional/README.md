@@ -14,13 +14,41 @@ a las llaves institucionales que esas entidades ya publican. Este proyecto
 se enfoca en lo que sí puede ser fuente primaria: reportes de necesidades,
 coordinación entre centros, recursos en especie.
 
-Este backend cubre Pereira (como el centro `risaralda-pereira`) además de
-Chocó, Caldas y Valle del Cauca — es el único backend del proyecto. Hubo un
-prototipo anterior acotado solo a Pereira; se retiró cuando este sistema
-nacional lo superó en todo (verificación, envíos, colectivos, mapa, alertas)
-sin perder nada — los 2 canales oficiales que tenía de más (Cruz Roja
-Pereira, banco de sangre del Hospital San Jorge) ya están sembrados acá como
-`Colectivo` verificados.
+Este backend es el único backend del proyecto y cubre **los 33
+departamentos de Colombia** (32 departamentos + Bogotá D.C.), no solo las
+zonas con afectación confirmada. Hubo un prototipo anterior acotado solo a
+Pereira; se retiró cuando este sistema nacional lo superó en todo
+(verificación, envíos, colectivos, mapa, alertas) sin perder nada — los 2
+canales oficiales que tenía de más (Cruz Roja Pereira, banco de sangre del
+Hospital San Jorge) ya están sembrados acá como `Colectivo` verificados.
+
+## Cobertura nacional: 33 departamentos, activación automática y manual
+
+Este es el diseño central del sistema, no un detalle secundario: desde el
+arranque, los 33 departamentos del país (`app/colombia.py`) quedan
+sembrados como centros de coordinación. Solo 4 arrancan **activos** con
+datos reales confirmados en medios — Pereira/Risaralda (contacto
+verificado), Chocó, Caldas y Valle del Cauca (afectación oficial, contacto
+todavía por confirmar). Los otros **29 quedan "dormidos"** (`activo=False`,
+sin contacto inventado) hasta que hacen falta:
+
+- **Activación automática:** el poll de USGS (`app/integrations/usgs.py`,
+  cada 60s) activa solo el centro de cualquier departamento donde caiga un
+  sismo de magnitud ≥ 4.0 (`MAGNITUD_UMBRAL_AUTO_SOPORTE`) — más bajo que
+  el umbral de "modo emergencia" nacional (≥ 6.0), pero alto para no abrir
+  un centro por cada temblor apenas perceptible. Si la geocodificación
+  devuelve un departamento fuera de la siembra inicial (variante de nombre
+  no contemplada), se crea un centro nuevo igual de dormido en vez de
+  perder el sismo.
+- **Activación manual:** `PATCH /api/v1/centros/{id}/activar` — red de
+  seguridad para falsos negativos (sismo real bajo el umbral, geocodificación
+  fallida, o cualquier otro motivo para coordinar una zona). Abierto,
+  cualquiera puede activar un centro.
+
+Ninguna de las dos vías inventa ni verifica contacto — activar solo abre el
+espacio para que un humano lo complete después. `GET /api/v1/resumen`
+cuenta solo centros `activo=True` en `total_centros`, así que el panorama
+público nunca exagera cuánta cobertura real hay.
 
 ## Qué es real y qué es sandbox
 
@@ -109,7 +137,8 @@ pasa igual contra SQLite y contra Postgres 16 real.
 
 | Método | Ruta | Qué hace |
 |---|---|---|
-| GET | `/api/v1/centros` | Listar centros territoriales |
+| GET | `/api/v1/centros` | Listar centros territoriales (los 33 departamentos, activos y dormidos) |
+| PATCH | `/api/v1/centros/{id}/activar` | Activar a mano un centro dormido (ver "Cobertura nacional" arriba) |
 | GET | `/api/v1/centros/{id}/necesidades` | Necesidades pendientes agregadas por categoría |
 | POST | `/api/v1/centros/{id}/entregas` | Marcar una solicitud como entregada (requiere JWT del centro) |
 | POST | `/api/v1/auth/token` | Login de un centro local (`id_territorio` + secreto → JWT) |
@@ -208,9 +237,11 @@ fuente.
 - Verificación humana obligatoria antes de que un reporte se convierta en
   una solicitud formal — nunca hay asignación automática sin un humano en
   el loop.
-- Los centros territoriales sembrados fuera de Pereira (Chocó, Caldas,
-  Valle) **no tienen contacto inventado** — quedan marcados como pendientes
-  de verificación hasta que alguien lo confirme con la entidad real.
+- Ningún centro territorial sembrado fuera de Pereira **tiene contacto
+  inventado** — ni los 3 con afectación confirmada (Chocó, Caldas, Valle),
+  ni los 29 "dormidos" del resto del país. Todos quedan marcados como
+  pendientes de verificación hasta que alguien lo confirme con la entidad
+  real.
 - Cambia `JWT_SECRET` y `NODOS_SECRETO_INICIAL` en `.env` antes de cualquier
   despliegue real — los valores de ejemplo son solo para desarrollo local. Si
   se te olvida, no pasa nada: con `ENVIRONMENT=production`, la app **se
@@ -219,7 +250,29 @@ fuente.
 - `POST /api/v1/reportes`, `POST /api/v1/colectivos` y `POST /api/v1/envios`
   (los endpoints públicos sin autenticación que escriben en la base) tienen
   rate limiting — 10 solicitudes por minuto por IP (`slowapi`,
-  `app/rate_limit.py`).
+  `app/rate_limit.py`). Ver "Pruebas de carga y estrés" abajo para cómo se
+  verificó.
+
+## Pruebas de carga y estrés
+
+Detalle completo en [`docs/pruebas-carga.md`](docs/pruebas-carga.md)
+(Locust, corrido en local contra una instancia propia — nunca contra la
+URL pública ni contra una base real). Resumen:
+
+- El rate limit de 10/min por IP corta exacto en los tres endpoints
+  públicos de escritura, en secuencia y bajo concurrencia real, sin `500`
+  ni escritura parcial. **`POST /api/v1/envios` no tenía este límite** —
+  se encontró durante la prueba y se corrigió (mismo decorador que ya
+  protegía a `/reportes` y `/colectivos`).
+- Tráfico de lectura normal (50 usuarios concurrentes): latencias de un
+  dígito de milisegundos, cero errores.
+- Bajo estrés sostenido sin pausas, el punto de quiebre real aparece entre
+  100 y 150 usuarios virtuales: se agota el pool de conexiones de
+  SQLAlchemy (5 + 10 de desborde = 15 conexiones concurrentes), con
+  errores `500` y el servicio lento por varios minutos después del pico.
+  No se corrigió en esa tarea por ser un cambio de infraestructura de
+  mayor alcance — queda documentado con mitigaciones concretas (subir
+  `pool_size`, modo WAL, o Postgres) en el doc completo.
 
 ## Próximos pasos honestos
 
