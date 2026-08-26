@@ -8,12 +8,13 @@ const PESTANAS = [
 
 export default function NavPublica({ vista, onCambiarVista }) {
   return (
-    <nav className="nav-publica">
+    <nav className="nav-publica" aria-label="Navegación principal">
       {PESTANAS.map((p) => (
         <button
           key={p.valor}
           type="button"
           className={vista === p.valor ? 'activa' : ''}
+          aria-current={vista === p.valor ? 'page' : undefined}
           onClick={() => onCambiarVista(p.valor)}
         >
           {p.etiqueta}

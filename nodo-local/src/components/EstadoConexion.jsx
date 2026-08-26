@@ -1,7 +1,7 @@
 export default function EstadoConexion({ enLinea, pendientes, onSincronizar }) {
   return (
-    <div className={`estado-conexion ${enLinea ? 'en-linea' : 'sin-conexion'}`}>
-      <span className="punto" />
+    <div className={`estado-conexion ${enLinea ? 'en-linea' : 'sin-conexion'}`} role="status" aria-live="polite">
+      <span className="punto" aria-hidden="true" />
       <span>{enLinea ? 'En línea' : 'Sin conexión — trabajando localmente'}</span>
       {pendientes > 0 && (
         <span className="pendientes">

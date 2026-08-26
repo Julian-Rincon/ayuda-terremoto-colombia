@@ -9,6 +9,7 @@ import ReportarPublico from './components/ReportarPublico.jsx'
 import RegistrarColectivo from './components/RegistrarColectivo.jsx'
 import Login from './components/Login.jsx'
 import Dashboard from './components/Dashboard.jsx'
+import ActualizacionApp from './components/ActualizacionApp.jsx'
 import './App.css'
 
 export default function App() {
@@ -48,11 +49,16 @@ export default function App() {
   }
 
   if (sesion === undefined) {
-    return <div className="cargando">Cargando…</div>
+    return (
+      <div className="cargando" role="status" aria-live="polite">
+        Cargando…
+      </div>
+    )
   }
 
   return (
     <div className="app">
+      <ActualizacionApp />
       <NavPublica vista={vista} onCambiarVista={setVista} />
 
       {vista === 'inicio' && <Inicio />}

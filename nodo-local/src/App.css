@@ -4,6 +4,34 @@
   color: var(--text-muted);
 }
 
+.actualizacion-app {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+}
+
+.actualizacion-app button {
+  margin-left: auto;
+}
+
+.actualizacion-app--info {
+  border-color: var(--ok);
+}
+
+.actualizacion-app--info button {
+  background: transparent;
+  color: var(--text-muted);
+  padding: 4px 8px;
+}
+
 .ayuda {
   font-size: 13px;
   color: var(--text-muted);
@@ -205,6 +233,54 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+}
+
+.lista-mapa-accesible {
+  margin-top: 20px;
+}
+
+.lista-mapa-accesible h2 {
+  font-size: 15px;
+  margin: 20px 0 8px;
+}
+
+.lista-mapa-accesible ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lista-mapa-accesible li {
+  border-bottom: 1px solid var(--border);
+}
+
+.lista-mapa-accesible li:last-child {
+  border-bottom: none;
+}
+
+.lista-mapa-accesible li.vacio {
+  padding: 10px 12px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.lista-mapa-accesible button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 0;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.lista-mapa-accesible button:hover {
+  background: var(--bg);
 }
 
 .alerta-sismica {

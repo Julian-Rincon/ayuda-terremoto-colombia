@@ -39,13 +39,28 @@ export default function Login({ onLogin }) {
       </p>
       <label>
         Id de territorio
-        <input value={idTerritorio} onChange={(e) => setIdTerritorio(e.target.value)} required />
+        <input
+          value={idTerritorio}
+          onChange={(e) => setIdTerritorio(e.target.value)}
+          required
+          autoComplete="username"
+        />
       </label>
       <label>
         Secreto
-        <input type="password" value={secreto} onChange={(e) => setSecreto(e.target.value)} required />
+        <input
+          type="password"
+          value={secreto}
+          onChange={(e) => setSecreto(e.target.value)}
+          required
+          autoComplete="current-password"
+        />
       </label>
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
       <button type="submit" disabled={cargando}>
         {cargando ? 'Ingresando…' : 'Ingresar'}
       </button>

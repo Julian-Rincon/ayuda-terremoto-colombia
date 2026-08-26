@@ -44,7 +44,11 @@ export default function NuevaSolicitudForm({ onEncolada }) {
       <button type="submit" disabled={enviando || contenido.trim().length < 3}>
         {enviando ? 'Guardando…' : 'Registrar'}
       </button>
-      {mensaje && <p className="mensaje">{mensaje}</p>}
+      {mensaje && (
+        <p className="mensaje" role="status" aria-live="polite">
+          {mensaje}
+        </p>
+      )}
     </form>
   )
 }

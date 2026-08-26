@@ -28,7 +28,11 @@ export default function Inicio() {
 
       <AlertaSismica />
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
 
       {resumen && (
         <div className="resumen-nacional">
@@ -66,7 +70,7 @@ export default function Inicio() {
       {resumen && Object.keys(resumen.solicitudes_pendientes_por_categoria).length > 0 && (
         <div className="necesidades-nacionales">
           <h2>Qué se está necesitando ahora mismo</h2>
-          <ul>
+          <ul role="list">
             {Object.entries(resumen.solicitudes_pendientes_por_categoria).map(([categoria, cantidad]) => (
               <li key={categoria}>
                 <span>{categoria}</span>

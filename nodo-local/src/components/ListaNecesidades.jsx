@@ -66,7 +66,7 @@ export default function ListaNecesidades({ sesion, enLinea, onAccionEncolada }) 
         </p>
       )}
       {categorias.length === 0 && <p>No hay solicitudes pendientes en este centro.</p>}
-      <ul>
+      <ul role="list">
         {categorias.map(([categoria, cantidad]) => (
           <li key={categoria}>
             <span>
@@ -78,7 +78,11 @@ export default function ListaNecesidades({ sesion, enLinea, onAccionEncolada }) 
           </li>
         ))}
       </ul>
-      {mensaje && <p className="mensaje">{mensaje}</p>}
+      {mensaje && (
+        <p className="mensaje" role="status" aria-live="polite">
+          {mensaje}
+        </p>
+      )}
     </div>
   )
 }

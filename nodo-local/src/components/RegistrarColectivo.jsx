@@ -59,7 +59,13 @@ export default function RegistrarColectivo() {
       </p>
       <label>
         Nombre (tuyo o del grupo)
-        <input value={nombre} onChange={(e) => setNombre(e.target.value)} required minLength={2} />
+        <input
+          value={nombre}
+          onChange={(e) => setNombre(e.target.value)}
+          required
+          minLength={2}
+          autoComplete="name"
+        />
       </label>
       <label>
         ¿Con qué puedes ayudar?
@@ -77,7 +83,7 @@ export default function RegistrarColectivo() {
       </label>
       <label>
         Contacto (teléfono o WhatsApp)
-        <input value={contacto} onChange={(e) => setContacto(e.target.value)} />
+        <input type="tel" value={contacto} onChange={(e) => setContacto(e.target.value)} autoComplete="tel" />
       </label>
       <label>
         Cuéntanos más (opcional)
@@ -86,7 +92,11 @@ export default function RegistrarColectivo() {
       <button type="submit" disabled={enviando || nombre.trim().length < 2}>
         {enviando ? 'Enviando…' : 'Registrarme'}
       </button>
-      {mensaje && <p className="mensaje">{mensaje}</p>}
+      {mensaje && (
+        <p className="mensaje" role="status" aria-live="polite">
+          {mensaje}
+        </p>
+      )}
     </form>
   )
 }
