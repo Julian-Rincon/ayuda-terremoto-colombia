@@ -283,6 +283,27 @@
   background: var(--bg);
 }
 
+.lista-mapa-accesible button.activar-zona {
+  width: auto;
+  display: inline-block;
+  margin: 0 12px 10px;
+  padding: 6px 12px;
+  font-size: 12px;
+  border: 1px solid var(--warning);
+  border-radius: 6px;
+  color: var(--warning);
+  background: transparent;
+}
+
+.lista-mapa-accesible button.activar-zona:hover {
+  background: var(--warning);
+  color: var(--accent-contrast);
+}
+
+.lista-mapa-accesible button.activar-zona:disabled {
+  opacity: 0.6;
+}
+
 .alerta-sismica {
   border: 1px solid var(--warning);
   border-radius: 8px;

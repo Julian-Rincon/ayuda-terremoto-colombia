@@ -19,6 +19,8 @@ export default function MapaNacional() {
   const [sismos, setSismos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState(null)
+  const [activandoId, setActivandoId] = useState(null)
+  const [errorActivar, setErrorActivar] = useState(null)
 
   const mapaRef = useRef(null)
   const marcadoresRef = useRef(new Map())
@@ -86,6 +88,23 @@ export default function MapaNacional() {
     marcadoresRef.current.get(id)?.openPopup()
   }
 
+  // Red de seguridad para falsos negativos: si el sismo no alcanzó el
+  // umbral automático, o la geocodificación falló, o hace falta coordinar
+  // una zona por cualquier otro motivo, cualquiera puede activarla a mano
+  // sin esperar a que el sistema la detecte solo. Nunca inventa contacto.
+  async function activarZona(centroId) {
+    setActivandoId(centroId)
+    setErrorActivar(null)
+    try {
+      const actualizado = await api.activarCentro(centroId)
+      setCentros((prev) => prev.map((c) => (c.id === centroId ? { ...c, activo: actualizado.activo } : c)))
+    } catch {
+      setErrorActivar('No se pudo activar la zona. ¿Hay conexión?')
+    } finally {
+      setActivandoId(null)
+    }
+  }
+
   return (
     <div className="mapa-nacional">
       <h1>Mapa del sistema</h1>
@@ -101,6 +120,11 @@ export default function MapaNacional() {
       {error && (
         <p className="error" role="alert">
           {error}
+        </p>
+      )}
+      {errorActivar && (
+        <p className="error" role="alert">
+          {errorActivar}
         </p>
       )}
 
@@ -141,6 +165,14 @@ export default function MapaNacional() {
                     {c.totalPendientes != null ? `${c.totalPendientes} necesidades pendientes` : 'Sin datos'}
                     <br />
                     {c.contacto_verificado && c.contacto ? `Contacto: ${c.contacto}` : 'Contacto sin verificar todavía'}
+                    {!c.activo && (
+                      <>
+                        <br />
+                        <button type="button" onClick={() => activarZona(c.id)} disabled={activandoId === c.id}>
+                          {activandoId === c.id ? 'Activando…' : 'Activar esta zona'}
+                        </button>
+                      </>
+                    )}
                   </Popup>
                 </CircleMarker>
               ))}
@@ -187,7 +219,14 @@ export default function MapaNacional() {
             </MapContainer>
           </div>
 
-          <ListaMapaAccesible centros={centros} reportes={reportes} sismos={sismos} onSeleccionar={seleccionarEnMapa} />
+          <ListaMapaAccesible
+            centros={centros}
+            reportes={reportes}
+            sismos={sismos}
+            onSeleccionar={seleccionarEnMapa}
+            onActivar={activarZona}
+            activandoId={activandoId}
+          />
         </>
       )}
     </div>

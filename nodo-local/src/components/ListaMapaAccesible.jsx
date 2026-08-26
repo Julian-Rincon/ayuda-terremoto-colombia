@@ -15,7 +15,7 @@ const ETIQUETA_URGENCIA = {
  * ese punto y abre su popup — pero la lista funciona igual de bien aunque
  * el mapa no se mire nunca.
  */
-export default function ListaMapaAccesible({ centros, reportes, sismos, onSeleccionar }) {
+export default function ListaMapaAccesible({ centros, reportes, sismos, onSeleccionar, onActivar, activandoId }) {
   return (
     <div className="lista-mapa-accesible">
       <h2 id="lista-centros-heading">Centros de coordinación ({centros.length})</h2>
@@ -28,6 +28,16 @@ export default function ListaMapaAccesible({ centros, reportes, sismos, onSelecc
               {c.totalPendientes != null ? `${c.totalPendientes} necesidades pendientes.` : 'Sin datos de necesidades.'}{' '}
               {c.contacto_verificado && c.contacto ? `Contacto verificado: ${c.contacto}.` : 'Contacto sin verificar todavía.'}
             </button>
+            {!c.activo && onActivar && (
+              <button
+                type="button"
+                className="activar-zona"
+                onClick={() => onActivar(c.id)}
+                disabled={activandoId === c.id}
+              >
+                {activandoId === c.id ? 'Activando…' : `Activar ${c.nombre} a mano`}
+              </button>
+            )}
           </li>
         ))}
       </ul>

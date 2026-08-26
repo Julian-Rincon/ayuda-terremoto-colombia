@@ -19,6 +19,10 @@ export function listarCentros() {
   return solicitar('/api/v1/centros')
 }
 
+export function activarCentro(centroId) {
+  return solicitar(`/api/v1/centros/${centroId}/activar`, { method: 'PATCH' })
+}
+
 export function login(idTerritorio, secreto) {
   return solicitar('/api/v1/auth/token', {
     method: 'POST',
