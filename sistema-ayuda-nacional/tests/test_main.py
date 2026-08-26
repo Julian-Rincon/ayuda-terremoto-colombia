@@ -1,8 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from app import ai_helper
 from app import seed_data as seed_data_module
@@ -10,6 +8,7 @@ from app.database import Base, get_db
 from app.integrations import usgs
 from app.main import app
 from app.rate_limit import limiter
+from tests.conftest import build_test_engine, reset_schema
 
 
 async def _usgs_loop_noop():
@@ -23,13 +22,11 @@ def client(monkeypatch):
     monkeypatch.setattr(usgs, "escuchar_usgs_loop", _usgs_loop_noop)  # nunca llamar a la red real en tests
     limiter.reset()  # cada test empieza con su propio cupo, sin arrastrar el de tests anteriores
 
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    # Mismo motor que usa tests/conftest.py: SQLite en memoria por defecto,
+    # o el Postgres real de DATABASE_URL si está exportada (ver ese archivo).
+    engine = build_test_engine()
+    reset_schema(engine)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    Base.metadata.create_all(bind=engine)
 
     def _override_get_db():
         db = TestingSessionLocal()
@@ -54,6 +51,12 @@ def client(monkeypatch):
         test_client.db_sessionmaker = TestingSessionLocal  # para sembrar datos sin endpoint (ej. EventoSismico)
         yield test_client
     app.dependency_overrides.clear()
+
+    # Deja el esquema limpio: con SQLite en memoria es opcional (el engine se
+    # descarta solo), pero con Postgres real (DATABASE_URL) es necesario para
+    # que el siguiente test no vea datos sembrados por este.
+    Base.metadata.drop_all(bind=engine)
+    engine.dispose()
 
 
 def test_raiz_responde_ok(client):

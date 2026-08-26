@@ -1,3 +1,15 @@
+# NOTA sobre `fromDatabase`: la sintaxis de abajo (name/property: connectionString,
+# referenciando el `name` de la entrada en `databases:`) sigue el blueprint spec
+# publicado por Render (https://render.com/docs/blueprint-spec#fromdatabase) al
+# momento de este cambio. No se pudo probar contra la cuenta real de Render (esta
+# tarea no crea servicios reales, solo edita este archivo declarativo) — revisar
+# que el blueprint valide sin errores en el dashboard de Render antes de desplegar.
+databases:
+  - name: ayuda-terremoto-db
+    plan: free
+    databaseName: ayuda_terremoto_nacional
+    user: ayuda_terremoto
+
 services:
   - type: web
     name: ayuda-terremoto-nacional
@@ -14,7 +26,9 @@ services:
       - key: NODOS_SECRETO_INICIAL
         generateValue: true
       - key: DATABASE_URL
-        value: sqlite:///./sistema_ayuda_nacional.db
+        fromDatabase:
+          name: ayuda-terremoto-db
+          property: connectionString
       - key: GROQ_API_KEY
         sync: false
       - key: WHATSAPP_APP_SECRET

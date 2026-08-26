@@ -52,19 +52,56 @@ uvicorn app.main:app --reload
 
 Abre `http://localhost:8000/docs` — Swagger UI interactivo, prueba todo desde ahí.
 
+## Base de datos: SQLite en local, Postgres en producción
+
+`DATABASE_URL` decide el motor — mismo código, sin ramas por engine. Por
+defecto (sin configurar nada) usa SQLite local, para que levantar el
+proyecto no dependa de tener Postgres instalado. En producción (Render) se
+usa Postgres real, gestionado por el blueprint (`render.yaml`, bloque
+`databases:`), conectado al backend vía `fromDatabase`.
+
+Esto no es una preferencia cosmética: en el free tier de Render el disco es
+efímero — el proceso se duerme por inactividad y, al despertar, el disco se
+reinicia desde cero. Con SQLite (un archivo en ese disco) eso significa
+**perder todos los datos sembrados cada vez que el servicio despierta**,
+confirmado en producción real. Postgres gestionado por Render no comparte
+ese disco efímero, así que sobrevive a los ciclos de sueño/despertar.
+
+Para probar contra Postgres real en local (recomendado antes de tocar
+`app/models.py` o `app/database.py`):
+
+```bash
+docker run -d --name ayuda-pg -e POSTGRES_PASSWORD=test -e POSTGRES_DB=ayuda_test -p 5433:5432 postgres:16
+export DATABASE_URL=postgresql://postgres:test@localhost:5433/ayuda_test
+uvicorn app.main:app --reload
+```
+
 ## Correr los tests
 
 ```bash
 pytest -v
 ```
 
-76 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
+Por defecto corre contra SQLite en memoria. Para correr la misma suite
+contra Postgres real (ver arriba), exportá `DATABASE_URL` antes:
+
+```bash
+export DATABASE_URL=postgresql://postgres:test@localhost:5433/ayuda_test
+pytest -v
+```
+
+`tests/conftest.py` arma el engine de pruebas según esa variable, y cada
+test deja el esquema limpio al terminar (`drop_all`) — necesario contra
+Postgres real, que persiste entre tests a diferencia del SQLite en memoria.
+
+81 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
 validación de firma de webhooks, siembra de datos (sin contactos
 inventados, incluyendo los colectivos oficiales verificados), pipeline de
 priorización, export HXL, USGS (umbral de activación, dedup, resiliencia a
 fallos de red), WhatsApp y Ushahidi (sandbox), detección de duplicados,
 envíos en camino, colectivos/voluntarios, resumen nacional, alertas
-sísmicas y resúmenes con IA, y la app FastAPI completa end-to-end.
+sísmicas y resúmenes con IA, y la app FastAPI completa end-to-end — toda la
+suite pasa igual contra SQLite y contra Postgres 16 real.
 
 ## Endpoints principales
 
@@ -189,5 +226,21 @@ fuente.
 - **Capas WMS/WFS reales** (GeoServer + PostGIS vivo) para integrar con
   ICDE/SNIGRD — este build usa lat/lon simples, suficiente para el pipeline,
   el mapa y los exports, pero no un servidor geoespacial real.
-- Migrar de SQLite a Postgres (`DATABASE_URL`) antes de cualquier volumen
-  de producción real.
+- ~~Migrar de SQLite a Postgres antes de cualquier volumen de producción
+  real~~ — resuelto: el código ya es agnóstico al motor vía `DATABASE_URL`
+  (ver sección "Base de datos" arriba), probado contra Postgres 16 real con
+  la suite completa de tests, y `render.yaml` ya declara la base gestionada.
+  Queda pendiente de revisión manual antes de desplegar:
+  - Confirmar en el dashboard de Render que el blueprint (`databases:` +
+    `fromDatabase` en `render.yaml`) valida sin errores — no se pudo probar
+    contra la cuenta real (fuera del alcance de este cambio: no se crean
+    servicios reales, solo se edita el YAML declarativo).
+  - El plan `free` de Postgres en Render expira/se elimina a los 30 días de
+    creado — antes de depender de esto para el evento real hay que decidir
+    si conviene pasar a un plan pago o tener un plan de respaldo (backup
+    manual periódico) para no repetir la pérdida de datos que motivó esta
+    migración.
+  - Una vez desplegado, correr una migración de los datos que ya existan en
+    el SQLite actual de producción (si los hay) hacia el Postgres nuevo —
+    este cambio no incluye un script de migración de datos, solo el cambio
+    de motor hacia adelante.
