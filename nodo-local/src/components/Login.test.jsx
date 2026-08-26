@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import Login from './Login.jsx'
@@ -9,6 +9,15 @@ import * as db from '../db.js'
 // Nunca red real ni IndexedDB real en estos tests: se mockean api.js y db.js.
 vi.mock('../api.js')
 vi.mock('../db.js')
+
+beforeEach(() => {
+  // El componente llama listarCentros() al montar (para sugerir/autocompletar
+  // zona) además de dentro de handleSubmit — los tests que no les importa esa
+  // llamada igual necesitan que no reviente contra un mock sin resolver.
+  api.listarCentros.mockResolvedValue([])
+  // jsdom no implementa navigator.geolocation: el componente ya lo detecta y
+  // no intenta usarlo, así que no hace falta mockearlo acá.
+})
 
 afterEach(() => {
   cleanup()
@@ -115,5 +124,59 @@ describe('Login', () => {
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /ingresar/i })).toBeEnabled()
     })
+  })
+
+  it('sin navigator.geolocation (o permiso denegado) no revienta y deja el campo para llenar a mano', () => {
+    render(<Login onLogin={vi.fn()} />)
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+
+  it('autocompleta el territorio cuando la ubicación coincide con un centro conocido', async () => {
+    api.listarCentros.mockResolvedValue([
+      { id: 1, id_territorio: 'choco', nombre: 'Chocó', departamento: 'Chocó' },
+      { id: 2, id_territorio: 'valle', nombre: 'Valle del Cauca', departamento: 'Valle del Cauca' },
+    ])
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => ({ address: { state: 'Chocó' } }) }))
+    navigator.geolocation = {
+      getCurrentPosition: (exito) => exito({ coords: { latitude: 5.6, longitude: -76.6 } }),
+    }
+
+    render(<Login onLogin={vi.fn()} />)
+
+    await waitFor(async () => {
+      expect(await screen.findByRole('status')).toHaveTextContent(/Chocó/i)
+    })
+    await waitFor(() => {
+      expect(screen.getByLabelText(/id de territorio/i)).toHaveValue('choco')
+    })
+
+    delete navigator.geolocation
+    vi.unstubAllGlobals()
+  })
+
+  it('no sobreescribe lo que la persona ya empezó a escribir aunque la ubicación resuelva después', async () => {
+    api.listarCentros.mockResolvedValue([
+      { id: 1, id_territorio: 'choco', nombre: 'Chocó', departamento: 'Chocó' },
+    ])
+    let resolverGeo
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => ({ address: { state: 'Chocó' } }) }))
+    navigator.geolocation = {
+      getCurrentPosition: (exito) => {
+        resolverGeo = () => exito({ coords: { latitude: 5.6, longitude: -76.6 } })
+      },
+    }
+
+    const user = userEvent.setup()
+    render(<Login onLogin={vi.fn()} />)
+    await user.type(screen.getByLabelText(/id de territorio/i), 'valle')
+
+    resolverGeo()
+    await waitFor(async () => {
+      expect(await screen.findByRole('status')).toHaveTextContent(/Chocó/i)
+    })
+    expect(screen.getByLabelText(/id de territorio/i)).toHaveValue('valle')
+
+    delete navigator.geolocation
+    vi.unstubAllGlobals()
   })
 })
