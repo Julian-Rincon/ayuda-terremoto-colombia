@@ -58,7 +58,7 @@ Abre `http://localhost:8000/docs` — Swagger UI interactivo, prueba todo desde 
 pytest -v
 ```
 
-76 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
+82 tests, cubren: modelos, clasificación IA con fallback, auth JWT y
 validación de firma de webhooks, siembra de datos (sin contactos
 inventados, incluyendo los colectivos oficiales verificados), pipeline de
 priorización, export HXL, USGS (umbral de activación, dedup, resiliencia a
@@ -177,9 +177,10 @@ fuente.
   se te olvida, no pasa nada: con `ENVIRONMENT=production`, la app **se
   niega a arrancar** mientras sigan con el valor de ejemplo
   (`app/config_checks.py`).
-- `POST /api/v1/reportes` y `POST /api/v1/colectivos` (los dos endpoints
-  públicos sin autenticación) tienen rate limiting — 10 solicitudes por
-  minuto por IP (`slowapi`, `app/rate_limit.py`).
+- `POST /api/v1/reportes`, `POST /api/v1/colectivos` y `POST /api/v1/envios`
+  (los endpoints públicos sin autenticación que escriben en la base) tienen
+  rate limiting — 10 solicitudes por minuto por IP (`slowapi`,
+  `app/rate_limit.py`).
 
 ## Próximos pasos honestos
 
