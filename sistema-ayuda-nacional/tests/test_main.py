@@ -62,10 +62,40 @@ def test_raiz_responde_ok(client):
     assert "alcance" in resp.json()
 
 
-def test_seed_crea_cuatro_centros(client):
+def test_seed_cubre_los_33_departamentos(client):
     resp = client.get("/api/v1/centros")
     assert resp.status_code == 200
-    assert len(resp.json()) == 4
+    centros = resp.json()
+    assert len(centros) == 33
+    assert sum(1 for c in centros if c["activo"]) == 4
+
+
+def test_activar_centro_manualmente(client):
+    centros = client.get("/api/v1/centros").json()
+    dormido = next(c for c in centros if not c["activo"])
+
+    resp = client.patch(f"/api/v1/centros/{dormido['id']}/activar")
+    assert resp.status_code == 200
+    assert resp.json()["activo"] is True
+
+    releido = client.get("/api/v1/centros").json()
+    actualizado = next(c for c in releido if c["id"] == dormido["id"])
+    assert actualizado["activo"] is True
+
+
+def test_activar_centro_manualmente_es_idempotente(client):
+    centros = client.get("/api/v1/centros").json()
+    dormido = next(c for c in centros if not c["activo"])
+
+    client.patch(f"/api/v1/centros/{dormido['id']}/activar")
+    segunda_vez = client.patch(f"/api/v1/centros/{dormido['id']}/activar")
+    assert segunda_vez.status_code == 200
+    assert segunda_vez.json()["activo"] is True
+
+
+def test_activar_centro_inexistente_da_404(client):
+    resp = client.patch("/api/v1/centros/999999/activar")
+    assert resp.status_code == 404
 
 
 def test_crear_reporte_manual_lo_clasifica(client):
@@ -301,6 +331,7 @@ def test_resumen_nacional_agrega_a_traves_de_todos_los_centros(client):
     resumen = client.get("/api/v1/resumen").json()
 
     assert resumen["total_centros"] == 4
+    assert resumen["total_centros_registrados"] == 33
     assert resumen["total_reportes"] == 2
     assert resumen["total_solicitudes_pendientes"] == 2
     assert resumen["total_colectivos_verificados"] == resumen_antes["total_colectivos_verificados"] + 1
@@ -312,6 +343,7 @@ def test_resumen_nacional_sin_datos_no_falla(client):
     assert resp.status_code == 200
     data = resp.json()
     assert data["total_centros"] == 4
+    assert data["total_centros_registrados"] == 33
     assert data["total_reportes"] == 0
     assert data["ultimo_evento_sismico"] is None
 

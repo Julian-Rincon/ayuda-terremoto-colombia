@@ -66,7 +66,9 @@ export default function MapaNacional() {
     <div className="mapa-nacional">
       <h1>Mapa del sistema</h1>
       <p className="ayuda">
-        Los círculos morados son los centros de coordinación. Los puntos de colores son necesidades reportadas — rojo
+        Los círculos morados son los centros de coordinación con actividad confirmada; los círculos grises son
+        departamentos que ya están en el sistema pero todavía sin actividad — se activan solos si hay un sismo fuerte
+        ahí, o cualquier coordinador los puede activar a mano. Los puntos de colores son necesidades reportadas — rojo
         es urgente, naranja es media. Los círculos rojos grandes son sismos detectados en los últimos días (entre
         más grande, mayor la magnitud). Toca cualquier punto para ver el detalle antes de mandar o mirar ayuda.
       </p>
@@ -85,15 +87,23 @@ export default function MapaNacional() {
               <CircleMarker
                 key={`centro-${c.id}`}
                 center={[c.lat, c.lon]}
-                radius={12}
-                pathOptions={{ color: '#7a3bff', fillColor: '#7a3bff', fillOpacity: 0.5 }}
+                radius={c.activo ? 12 : 7}
+                pathOptions={
+                  c.activo
+                    ? { color: '#7a3bff', fillColor: '#7a3bff', fillOpacity: 0.5 }
+                    : { color: '#9ca3af', fillColor: '#9ca3af', fillOpacity: 0.25 }
+                }
               >
                 <Popup>
                   <strong>{c.nombre}</strong>
                   <br />
                   {c.departamento}
                   <br />
-                  {c.totalPendientes != null ? `${c.totalPendientes} necesidades pendientes` : 'Sin datos'}
+                  {c.activo
+                    ? c.totalPendientes != null
+                      ? `${c.totalPendientes} necesidades pendientes`
+                      : 'Sin datos'
+                    : 'Sin actividad todavía en esta zona'}
                   <br />
                   {c.contacto_verificado && c.contacto ? `Contacto: ${c.contacto}` : 'Contacto sin verificar todavía'}
                 </Popup>

@@ -9,9 +9,10 @@ from datetime import datetime, timezone
 import httpx
 from sqlalchemy.orm import Session
 
-from .. import models
+from .. import auth, models
 from ..database import SessionLocal
 from ..websocket_manager import manager
+from . import geocoding
 
 logger = logging.getLogger("integraciones.usgs")
 
@@ -22,6 +23,11 @@ logger = logging.getLogger("integraciones.usgs")
 # con lo relevante para este sistema.
 USGS_FEED_URL = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_hour.geojson"
 MAGNITUD_UMBRAL_EMERGENCIA = 6.0
+# Sismo lo bastante fuerte como para justificar abrir un centro de
+# coordinación nuevo en una zona que hoy no tiene ninguno — más bajo que el
+# umbral de "modo emergencia" nacional, pero no tan bajo como el mínimo del
+# feed (2.5) para no crear un centro por cada temblor apenas perceptible.
+MAGNITUD_UMBRAL_AUTO_SOPORTE = 4.0
 INTERVALO_SEGUNDOS = 60
 
 # Bounding box aproximado de Colombia continental
@@ -31,6 +37,67 @@ COLOMBIA_LON_MIN, COLOMBIA_LON_MAX = -82.0, -66.8
 
 def _esta_en_colombia(lon: float, lat: float) -> bool:
     return COLOMBIA_LON_MIN <= lon <= COLOMBIA_LON_MAX and COLOMBIA_LAT_MIN <= lat <= COLOMBIA_LAT_MAX
+
+
+async def _activar_centro_para_zona(db: Session, lat: float, lon: float) -> "models.CentroLocal | None":
+    """
+    Si un sismo lo bastante fuerte cae en un departamento, activa el centro
+    de coordinación de esa zona. Los 33 departamentos ya están sembrados
+    desde el arranque (ver seed_data.py) — la mayoría "dormidos"
+    (activo=False, sin contacto) hasta que algo confirma que hace falta
+    coordinar ahí. Activar nunca inventa contacto ni lo marca verificado:
+    solo abre el espacio para que un humano lo complete.
+
+    Si la geocodificación devuelve un departamento que por algún motivo no
+    está en la siembra (variante de nombre no contemplada en los alias de
+    geocoding.py), se crea uno nuevo igual de dormido en vez de descartar
+    el sismo — nunca se pierde una zona real solo por un desajuste de texto.
+    """
+    import os
+
+    ubicacion = await geocoding.departamento_desde_coordenadas(lat, lon)
+    if ubicacion is None:
+        return None
+
+    centro = db.query(models.CentroLocal).filter_by(id_territorio=ubicacion["id_territorio"]).first()
+    secreto_inicial = os.getenv("NODOS_SECRETO_INICIAL", "cambia-esto-en-produccion")
+
+    if centro is not None:
+        if centro.activo:
+            return None
+        centro.activo = True
+        db.commit()
+        db.refresh(centro)
+        if not db.query(models.NodoCredencial).filter_by(centro_id=centro.id).first():
+            db.add(models.NodoCredencial(centro_id=centro.id, secreto_hash=auth.hash_secreto(secreto_inicial)))
+            db.commit()
+        logger.warning(
+            "Centro activado automáticamente por actividad sísmica: %s (%s)",
+            centro.nombre, centro.id_territorio,
+        )
+        return centro
+
+    centro = models.CentroLocal(
+        id_territorio=ubicacion["id_territorio"],
+        nombre=ubicacion["departamento"],
+        departamento=ubicacion["departamento"],
+        contacto=None,
+        contacto_verificado=False,
+        activo=True,
+        lat=lat,
+        lon=lon,
+    )
+    db.add(centro)
+    db.commit()
+    db.refresh(centro)
+    db.add(models.NodoCredencial(centro_id=centro.id, secreto_hash=auth.hash_secreto(secreto_inicial)))
+    db.commit()
+
+    logger.warning(
+        "Centro nuevo creado automáticamente por actividad sísmica (departamento fuera de la siembra nacional): %s (%s)",
+        centro.nombre, centro.id_territorio,
+    )
+    return centro
 
 
 async def _procesar_eventos(db: Session, features: list[dict]) -> list["models.EventoSismico"]:
@@ -81,6 +148,15 @@ async def _procesar_eventos(db: Session, features: list[dict]) -> list["models.E
                 "magnitud": evento.magnitud,
                 "lugar": evento.lugar,
             })
+
+        if magnitud >= MAGNITUD_UMBRAL_AUTO_SOPORTE:
+            centro_activado = await _activar_centro_para_zona(db, lat, lon)
+            if centro_activado is not None:
+                await manager.broadcast("centro_activado", {
+                    "id_territorio": centro_activado.id_territorio,
+                    "nombre": centro_activado.nombre,
+                    "por_evento": evento.id_externo,
+                })
         activados.append(evento)
     return activados
 

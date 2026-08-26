@@ -55,6 +55,14 @@ export default function Inicio() {
         </div>
       )}
 
+      {resumen && (
+        <p className="ayuda cobertura-nacional">
+          Los {resumen.total_centros_registrados} departamentos del país ya están dentro del sistema. Los{' '}
+          {resumen.total_centros_registrados - resumen.total_centros} restantes se activan solos apenas hay actividad
+          sísmica confirmada en su zona, o cualquier coordinador puede activarlos a mano si hace falta antes de eso.
+        </p>
+      )}
+
       {resumen && Object.keys(resumen.solicitudes_pendientes_por_categoria).length > 0 && (
         <div className="necesidades-nacionales">
           <h2>Qué se está necesitando ahora mismo</h2>

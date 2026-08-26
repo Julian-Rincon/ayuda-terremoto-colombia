@@ -84,6 +84,30 @@ def listar_centros(db: Session = Depends(get_db)):
     return db.query(models.CentroLocal).all()
 
 
+@app.patch("/api/v1/centros/{centro_id}/activar", response_model=schemas.CentroLocalOut)
+async def activar_centro_manualmente(centro_id: int, db: Session = Depends(get_db)):
+    """
+    Red de seguridad para falsos negativos: si un sismo real no alcanza el
+    umbral automático, o la geocodificación falla, o hace falta coordinar
+    una zona por cualquier otro motivo, cualquiera puede activar a mano el
+    centro de esa zona sin esperar a que el sistema lo detecte solo. Nunca
+    inventa ni verifica contacto — activar solo abre el espacio.
+    """
+    centro = db.query(models.CentroLocal).get(centro_id)
+    if not centro:
+        raise HTTPException(404, "Centro no encontrado")
+    if not centro.activo:
+        centro.activo = True
+        db.commit()
+        db.refresh(centro)
+        await manager.broadcast("centro_activado", {
+            "id_territorio": centro.id_territorio,
+            "nombre": centro.nombre,
+            "por_evento": None,
+        })
+    return centro
+
+
 @app.get("/api/v1/centros/{centro_id}/necesidades", response_model=schemas.NecesidadesCentro)
 def necesidades_centro(centro_id: int, db: Session = Depends(get_db)):
     centro = db.query(models.CentroLocal).get(centro_id)
@@ -446,7 +470,8 @@ def resumen_nacional(db: Session = Depends(get_db)):
     )
 
     return schemas.ResumenNacional(
-        total_centros=db.query(models.CentroLocal).count(),
+        total_centros=db.query(models.CentroLocal).filter(models.CentroLocal.activo.is_(True)).count(),
+        total_centros_registrados=db.query(models.CentroLocal).count(),
         total_reportes=db.query(models.ReporteCiudadano).count(),
         reportes_pendientes_verificacion=db.query(models.ReporteCiudadano)
         .filter(models.ReporteCiudadano.verificado.is_(False))

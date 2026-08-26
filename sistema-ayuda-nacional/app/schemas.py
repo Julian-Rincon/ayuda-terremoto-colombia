@@ -153,6 +153,7 @@ class ResumenNecesidadesIA(BaseModel):
 
 class ResumenNacional(BaseModel):
     total_centros: int
+    total_centros_registrados: int
     total_reportes: int
     reportes_pendientes_verificacion: int
     total_solicitudes_pendientes: int
