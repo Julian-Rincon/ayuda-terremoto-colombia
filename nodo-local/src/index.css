@@ -6,9 +6,13 @@
   --border: #e0dfe4;
   --accent: #7a3bff;
   --accent-contrast: #ffffff;
-  --ok: #1a8f5c;
+  /* --ok, --error y --warning están ajustados para dar al menos 4.5:1 de
+     contraste sobre --bg y --surface (texto normal, WCAG 2.1 AA) — los
+     tonos originales de la paleta se quedaban cortos, sobre todo
+     --warning en modo claro (~2.8:1) y --error en modo oscuro (~3:1). */
+  --ok: #188254;
   --error: #c0392b;
-  --warning: #d9822b;
+  --warning: #a4611d;
 
   font: 16px/1.5 system-ui, 'Segoe UI', Roboto, sans-serif;
   color: var(--text);
@@ -25,7 +29,19 @@
     --border: #2e303a;
     --accent: #b083ff;
     --accent-contrast: #16171d;
+    --ok: #1c9c64;
+    --error: #da6559;
+    --warning: #d9822b;
   }
+}
+
+/* Foco de teclado siempre visible, independiente del color de fondo del
+   elemento (el offset hace que el anillo caiga sobre --bg/--surface). No
+   se activa con clic de mouse, solo con navegación por teclado. */
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 * {

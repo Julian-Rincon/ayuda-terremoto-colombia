@@ -29,15 +29,17 @@ export default function AlertaSismica() {
 
   return (
     <div className="alerta-sismica">
-      <div className="alerta-sismica-encabezado">
-        <span className="alerta-sismica-icono">⚠</span>
+      <div className="alerta-sismica-encabezado" role="status" aria-live="polite">
+        <span className="alerta-sismica-icono" aria-hidden="true">
+          ⚠
+        </span>
         <p>{alerta.resumen}</p>
       </div>
-      <button type="button" onClick={() => setExpandido((v) => !v)}>
+      <button type="button" onClick={() => setExpandido((v) => !v)} aria-expanded={expandido} aria-controls="detalle-sismos">
         {expandido ? 'Ocultar detalle' : `Ver los ${alerta.eventos.length} sismos detectados`}
       </button>
       {expandido && (
-        <ul>
+        <ul id="detalle-sismos" role="list">
           {alerta.eventos.map((e) => (
             <li key={e.id}>
               Magnitud {e.magnitud} — {e.lugar} — {tiempoRelativo(e.timestamp)}

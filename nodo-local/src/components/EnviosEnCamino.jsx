@@ -49,7 +49,7 @@ export default function EnviosEnCamino({ sesion, enLinea }) {
   return (
     <div className="envios-en-camino">
       <h2>En camino hacia este centro</h2>
-      <ul>
+      <ul role="list">
         {activos.map((envio) => (
           <li key={envio.id}>
             <span>
