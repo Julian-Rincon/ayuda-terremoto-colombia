@@ -38,18 +38,22 @@ voluntario, damnificado o para un subsidio — ver la nota de seguridad en
   UML, especificación de API, stack recomendado y notas de resiliencia y
   confianza.
 - **[`sistema-ayuda-nacional/`](sistema-ayuda-nacional/)** — el Nodo Central
-  de la arquitectura nacional multi-departamento: reportes vía WhatsApp y
-  Ushahidi, colectivos/voluntarios, envíos en especie, detección de
-  duplicados, alerta sísmica en tiempo real (USGS) con resúmenes por IA
-  (Groq, gratis), export HXL para la comunidad humanitaria internacional.
-  Ver su README para el detalle de qué integraciones son reales y cuáles
-  corren en modo sandbox.
+  de la arquitectura nacional: los 33 departamentos de Colombia quedan
+  sembrados como centros de coordinación desde el arranque (4 activos con
+  datos reales, 29 "dormidos" hasta que un sismo fuerte o un coordinador
+  los activa), reportes vía WhatsApp y Ushahidi, colectivos/voluntarios,
+  envíos en especie, detección de duplicados, alerta sísmica en tiempo real
+  (USGS) con resúmenes por IA (Groq, gratis), export HXL para la comunidad
+  humanitaria internacional. Corre sobre Postgres en producción (SQLite
+  como fallback local, mismo código para ambos vía `DATABASE_URL`). Ver su
+  README para el detalle de qué integraciones son reales y cuáles corren en
+  modo sandbox, y para las pruebas de carga/estrés reales contra el backend.
 - **[`nodo-local/`](nodo-local/)** — app offline-first (React/Vite +
-  IndexedDB) con dos caras: un portal público (panorama nacional, mapa
-  interactivo, reportar, registrarse como voluntario, todo sin login) y un
-  panel de coordinador por centro territorial que sigue funcionando sin
-  conexión y sincroniza todo apenas vuelva la señal. Habla con
-  `sistema-ayuda-nacional/`.
+  IndexedDB), instalable como PWA, con dos caras: un portal público
+  (panorama nacional, mapa interactivo accesible por teclado, reportar,
+  registrarse como voluntario, todo sin login) y un panel de coordinador
+  por centro territorial que sigue funcionando sin conexión y sincroniza
+  todo apenas vuelva la señal. Habla con `sistema-ayuda-nacional/`.
 
 ## Qué falta (honesto)
 

@@ -4,12 +4,18 @@ Tiene dos caras:
 
 - **Portal público** (sin login): cualquiera puede ver el panorama nacional,
   reportar una necesidad, o registrarse como voluntario/colectivo.
-- **Panel de coordinador** (con login, uno por centro territorial —
-  Pereira/Risaralda, Chocó, Caldas, Valle): registra reportes y entregas
-  **incluso sin conexión**, y sincroniza todo con el
-  [Nodo Central](../sistema-ayuda-nacional/) apenas vuelva la señal. Es la
-  pieza que `planoidea.md` §8 marca como "la parte que más importa" en zonas
-  como Chocó, donde la conectividad es intermitente.
+- **Panel de coordinador** (con login, uno por centro territorial):
+  registra reportes y entregas **incluso sin conexión**, y sincroniza todo
+  con el [Nodo Central](../sistema-ayuda-nacional/) apenas vuelva la señal.
+  Es la pieza que `planoidea.md` §8 marca como "la parte que más importa"
+  en zonas como Chocó, donde la conectividad es intermitente. El backend
+  ya siembra un centro por cada uno de los 33 departamentos del país —
+  Pereira/Risaralda, Chocó, Caldas y Valle del Cauca arrancan **activos**
+  con datos reales confirmados; los otros 29 quedan "dormidos" hasta que
+  un sismo fuerte o un coordinador los activa (ver el README del Nodo
+  Central, sección "Cobertura nacional"). El login no distingue entre
+  centros activos y dormidos — cualquiera con el `id_territorio` y el
+  secreto correcto puede entrar, esté o no ya activado.
 
 ## Cómo funciona el offline-first
 
@@ -39,10 +45,11 @@ npm run dev
 ```
 
 Necesitas el backend de `sistema-ayuda-nacional/` corriendo (por defecto en
-`http://localhost:8000`) para poder iniciar sesión y sincronizar. El
-id de territorio de login es uno de: `risaralda-pereira`, `choco`, `caldas`,
-`valle` — el secreto es el valor de `NODOS_SECRETO_INICIAL` que hayas
-configurado en el backend.
+`http://localhost:8000`) para poder iniciar sesión y sincronizar. El id de
+territorio de login es el de cualquiera de los 33 centros sembrados (por
+ejemplo `risaralda-pereira`, `choco`, `caldas` o `valle`, que son los que
+hoy tienen datos reales) — el secreto es el valor de
+`NODOS_SECRETO_INICIAL` que hayas configurado en el backend.
 
 ## Tests
 
@@ -50,19 +57,26 @@ configurado en el backend.
 npm test
 ```
 
-18 tests con Vitest, sobre la lógica que garantiza que nada se pierde
-offline: cola de salida (`db.test.js`) y motor de sincronización con
-reintentos (`sync.test.js`, incluye reportes, entregas y registro de
-colectivos), usando `fake-indexeddb` para simular IndexedDB en Node sin
-necesitar un navegador real.
+39 tests con Vitest en 5 archivos:
 
-**Nota honesta:** estos tests cubren la lógica de persistencia y
-sincronización, que es donde vive el riesgo real de un sistema offline-first
-(perder datos, duplicar envíos, quedarse colgado sin red). No hay tests de
-componentes React ni verificación visual en un navegador real — se validó
-manualmente que `npm run build` compila limpio y que el servidor de
-desarrollo sirve la app sin errores, pero no un click-through completo en
-un navegador.
+- **Lógica offline** (18 tests, la base histórica de esta app): cola de
+  salida (`db.test.js`, 11) y motor de sincronización con reintentos
+  (`sync.test.js`, 7, incluye reportes, entregas y registro de colectivos),
+  usando `fake-indexeddb` para simular IndexedDB en Node sin necesitar un
+  navegador real.
+- **Componentes React** (21 tests, con Testing Library): `Login.test.jsx`
+  (6, login y manejo de credenciales inválidas), `NuevaSolicitudForm.test.jsx`
+  (7, validación y envío del formulario reusado por reportar/coordinador) y
+  `EstadoConexion.test.jsx` (8, indicador de conexión y estado del outbox).
+
+**Nota honesta:** sigue sin haber verificación visual en un navegador real
+más allá de lo que cubren estos tests — se validó manualmente que
+`npm run build` compila limpio y que el servidor de desarrollo sirve la
+app sin errores, pero no un click-through completo de principio a fin en
+un navegador. La instalabilidad como PWA y la navegación por teclado del
+mapa sí se verificaron con Playwright contra un build real (ver
+[`docs/accesibilidad-pwa.md`](docs/accesibilidad-pwa.md)), fuera de esta
+suite de Vitest.
 
 ## Estructura
 
@@ -83,8 +97,10 @@ src/
     ├── Dashboard.jsx           # panel del coordinador, requiere sesión
     ├── EstadoConexion.jsx
     ├── ListaNecesidades.jsx
+    ├── ListaMapaAccesible.jsx  # alternativa textual y navegable por teclado al mapa
     ├── EnviosEnCamino.jsx
-    └── NuevaSolicitudForm.jsx  # reusado por ReportarPublico y por el Dashboard
+    ├── NuevaSolicitudForm.jsx  # reusado por ReportarPublico y por el Dashboard
+    └── ActualizacionApp.jsx    # aviso de nueva versión / app lista para usarse offline (PWA)
 ```
 
 ## Portal público
@@ -103,13 +119,36 @@ registrarse como voluntario funciona incluso sin señal.
 ## Mapa nacional
 
 `MapaNacional.jsx` usa **Leaflet + OpenStreetMap** — gratis, sin llave de
-API, coherente con que el proyecto es 100% código abierto. Muestra los 4
-centros territoriales (con su conteo de necesidades pendientes), los
+API, coherente con que el proyecto es 100% código abierto. Muestra los 33
+centros territoriales del país (activos con un círculo más grande, los
+"dormidos" más tenues, con su conteo de necesidades pendientes), los
 reportes que tienen coordenadas (color por urgencia; los que aún no tiene
 confirmación humana se ven más tenues), y todos los sismos detectados
 recientemente por USGS (círculo más grande = mayor magnitud). A diferencia
 del resto de la app, **el mapa necesita conexión** — las imágenes del mapa
 no se pueden cachear para verlo offline en esta versión.
+
+Los marcadores del mapa (`CircleMarker` de Leaflet) no reciben foco de
+teclado. `ListaMapaAccesible.jsx` agrega, debajo del mapa, tres listas
+navegables (centros, necesidades reportadas, sismos) con la misma
+información que los popups, usando `<button>` reales — funciona igual de
+bien para quien nunca ve el mapa. Detalle completo, incluida la
+verificación con Playwright, en
+[`docs/accesibilidad-pwa.md`](docs/accesibilidad-pwa.md).
+
+## App instalable (PWA)
+
+`nodo-local` se puede instalar como app (`vite-plugin-pwa`, estrategia
+`generateSW`/Workbox): manifest con iconos propios, y un service worker
+que precachea el shell de la app (HTML/JS/CSS/iconos) para que cargue sin
+conexión después de la primera visita. Las llamadas a la API del Nodo
+Central nunca pasan por ese precache — siguen yendo directo a la red.
+`ActualizacionApp.jsx` avisa cuando hay versión nueva o cuando el offline
+ya quedó listo, pero **nunca recarga la página sola** (para no perder un
+reporte a medio llenar). Instalabilidad verificada con Playwright contra
+un build real (`installabilityErrors: []`) — ver
+[`docs/accesibilidad-pwa.md`](docs/accesibilidad-pwa.md) para el detalle y
+cómo repetir la verificación.
 
 ## Alerta sísmica
 
@@ -139,6 +178,5 @@ recibe, no del que despacha.
 - Si el JWT expira mientras el centro está offline, las entregas encoladas
   quedarán en estado `error` hasta volver a iniciar sesión con conexión —
   no hay renovación automática de token todavía.
-- No hay Service Worker / manifest de PWA instalable — corre como web app
-  normal en el navegador, que ya cachea localmente vía IndexedDB, pero no
-  funciona sin haber cargado la página al menos una vez con conexión.
+- El service worker de la PWA (ver arriba) solo cachea el shell estático de
+  la app — la primera carga sigue necesitando conexión, igual que antes.
