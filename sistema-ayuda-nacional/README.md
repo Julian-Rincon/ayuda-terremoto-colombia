@@ -283,20 +283,12 @@ URL pública ni contra una base real). Resumen:
   ICDE/SNIGRD — este build usa lat/lon simples, suficiente para el pipeline,
   el mapa y los exports, pero no un servidor geoespacial real.
 - ~~Migrar de SQLite a Postgres antes de cualquier volumen de producción
-  real~~ — resuelto: el código ya es agnóstico al motor vía `DATABASE_URL`
-  (ver sección "Base de datos" arriba), probado contra Postgres 16 real con
-  la suite completa de tests, y `render.yaml` ya declara la base gestionada.
-  Queda pendiente de revisión manual antes de desplegar:
-  - Confirmar en el dashboard de Render que el blueprint (`databases:` +
-    `fromDatabase` en `render.yaml`) valida sin errores — no se pudo probar
-    contra la cuenta real (fuera del alcance de este cambio: no se crean
-    servicios reales, solo se edita el YAML declarativo).
-  - El plan `free` de Postgres en Render expira/se elimina a los 30 días de
-    creado — antes de depender de esto para el evento real hay que decidir
-    si conviene pasar a un plan pago o tener un plan de respaldo (backup
-    manual periódico) para no repetir la pérdida de datos que motivó esta
-    migración.
-  - Una vez desplegado, correr una migración de los datos que ya existan en
-    el SQLite actual de producción (si los hay) hacia el Postgres nuevo —
-    este cambio no incluye un script de migración de datos, solo el cambio
-    de motor hacia adelante.
+  real~~ — resuelto y **ya desplegado en producción** (26 de agosto de
+  2026): el blueprint de Render sincronizó solo, creó la base gestionada y
+  el backend real ya corre sobre Postgres, confirmado en vivo contra
+  `https://ayuda-terremoto-nacional.onrender.com`.
+  - **Pendiente real, con fecha:** el plan `free` de Postgres en Render
+    expira/se elimina a los 30 días de creado — se borra sola el **25 de
+    septiembre de 2026** si no se hace nada antes. Plan B ya definido y
+    documentado en [`docs/migracion-neon.md`](docs/migracion-neon.md):
+    mover la base a Neon, que sí es gratis sin fecha de expiración.
