@@ -1,0 +1,71 @@
+{
+  // Config de markdownlint para PRs de contribuidores externos.
+  //
+  // Filosofía: el lint solo debe poner un PR en rojo cuando el markdown
+  // está realmente roto (enlaces, HTML crudo, referencias). Nunca por
+  // gustos de estilo (cómo se escribe un encabezado, qué viñeta usar,
+  // cuántos espacios en una tabla). Un contribuidor primerizo no debería
+  // tener que aprenderse la guía de estilo de markdown para que le
+  // pasen un PR.
+  //
+  // Se parte de "default: true" (todas las reglas activas) y se apagan
+  // explícitamente solo las que caen en "estilo", nunca las que afectan
+  // el contenido o el render.
+  "default": true,
+
+  // --- Longitud de línea ---
+  // MD013: obliga a cortar líneas a N caracteres. No afecta el render
+  // (el markdown reflowea igual) y con texto en español + tablas genera
+  // falsos positivos constantes.
+  "MD013": false,
+
+  // --- Estilo de encabezados ---
+  // Estas reglas solo opinan sobre CÓMO se escribe un heading, no si
+  // está roto. Con muchos autores distintos (varios READMEs, docs de
+  // subproyectos) exigir un único estilo aporta más fricción que valor.
+  "MD001": false, // heading-increment: prohíbe saltar de H1 a H3 sin pasar por H2
+  "MD003": false, // heading-style: exige un único estilo (atx "#" vs setext "===") en todo el archivo
+  "MD018": false, // no-missing-space-atx: espacio obligatorio después del "#"
+  "MD019": false, // no-multiple-space-atx: más de un espacio después del "#"
+  "MD020": false, // no-missing-space-closed-atx: variante para headings cerrados "# Título #"
+  "MD021": false, // no-multiple-space-closed-atx: idem con espacios de más
+  "MD022": false, // blanks-around-headings: exige línea en blanco antes/después del heading
+  "MD023": false, // heading-start-left: el heading no puede empezar indentado
+  "MD024": false, // no-duplicate-heading: prohíbe headings repetidos (común: "Uso" en varios READMEs)
+  "MD025": false, // single-title/single-h1: exige un único H1 por archivo
+  "MD026": false, // no-trailing-punctuation: prohíbe puntuación al final del heading
+  "MD036": false, // no-emphasis-as-heading: prohíbe usar **negrita** como si fuera un heading
+
+  // --- Estilo de listas ---
+  // Igual que encabezados: solo opinan sobre el carácter/indentación
+  // usada, no si la lista se ve rota en el render.
+  "MD004": false, // ul-style: exige un único carácter de viñeta (-, *, +) en todo el archivo
+  "MD005": false, // list-indent: indentación consistente entre ítems de una lista
+  "MD007": false, // ul-indent: cantidad exacta de espacios de indentación en sublistas
+  "MD029": false, // ol-prefix: exige numeración 1/2/3 vs 1/1/1 consistente en listas ordenadas
+  "MD030": false, // list-marker-space: cantidad exacta de espacios después del marcador de lista
+  "MD032": false, // blanks-around-lists: exige línea en blanco antes/después de una lista
+
+  // --- Cosmético / no afecta el render en GitHub ---
+  // Se agregaron después de correr el lint contra los .md existentes del
+  // repo: ninguna de estas rompe nada, pero con el default en "true"
+  // ponían el repo en rojo por contenido ya existente (URLs sueltas en
+  // README.md/planoidea.md, bloques de código sin lenguaje, espaciado
+  // de tablas). Mismo criterio que arriba: es estilo, no se bloquea.
+  "MD034": false, // no-bare-urls: URLs sueltas sin "<>" ni "[texto](url)" — GitHub las auto-linkea igual
+  "MD040": false, // fenced-code-language: bloques ``` sin lenguaje especificado — solo se pierde resaltado de sintaxis
+  "MD047": false, // single-trailing-newline: archivo sin salto de línea final
+  "MD060": false, // table-column-style: espaciado de "|" en tablas — puramente cosmético
+
+  // --- Lo que se queda activo a propósito (si esto falla, el PR debe ---
+  // --- quedar en rojo, porque algo realmente se rompe) ---
+  // MD011 no-reversed-links          -> enlace escrito al revés: (texto)[url] en vez de [texto](url)
+  // MD033 no-inline-html             -> HTML crudo mezclado en el markdown
+  // MD039 no-space-in-links          -> espacios dentro de "[ texto ](url)" que rompen el enlace
+  // MD042 no-empty-links             -> "[texto]()" con destino vacío
+  // MD051 link-fragments             -> enlaces internos "#ancla" que apuntan a un heading inexistente
+  // MD052 reference-links-images     -> "[texto][referencia]" sin su "[referencia]: url" definido
+  // MD053 link-image-reference-definitions -> definiciones de referencia declaradas y nunca usadas
+  // Todas quedan en su valor por defecto (activas): no se listan aquí,
+  // simplemente no se tocan.
+}

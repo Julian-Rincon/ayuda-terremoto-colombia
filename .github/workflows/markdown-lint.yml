@@ -1,0 +1,26 @@
+name: Markdown lint
+
+# Solo corre si el PR toca al menos un archivo .md, y solo sobre PRs
+# contra main. Así un PR que solo cambia código no dispara este workflow.
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "**/*.md"
+
+jobs:
+  markdownlint:
+    name: markdownlint-cli2
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      # Reglas en .markdownlint.jsonc (versionado en la raíz del repo).
+      # Es deliberadamente permisivo: solo bloquea el PR por cosas que
+      # rompen el markdown (enlaces, HTML crudo, referencias), no por
+      # estilo. Ver los comentarios de ese archivo para el detalle.
+      - name: Run markdownlint-cli2
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          globs: "**/*.md"
