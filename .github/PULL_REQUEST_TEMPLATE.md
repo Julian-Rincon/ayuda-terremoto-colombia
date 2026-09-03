@@ -6,7 +6,9 @@ Explica brevemente qué cambia este PR y por qué.
 
 ## Issue relacionado
 
-Cierra #
+<!-- GitHub solo cierra el issue solo si la palabra está en inglés
+     (Closes/Fixes/Resolves) — "Cierra #N" en español no lo hace. -->
+Closes #
 
 ## Cambios incluidos
 
