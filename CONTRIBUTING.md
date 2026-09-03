@@ -35,6 +35,14 @@ npm test
 
 Un PR que rompe tests existentes no se mergea hasta que se arregle.
 
+## Contribuidores
+
+Gracias a quienes ya sumaron trabajo real acá:
+
+- [@LeonardSF](https://github.com/LeonardSF) — plantillas de issues y pull
+  request en `.github/`.
+- [@VedantMadane](https://github.com/VedantMadane) — `CODE_OF_CONDUCT.md`.
+
 ## Licencia
 
 MIT — ver `LICENSE`.
