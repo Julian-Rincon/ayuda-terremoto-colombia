@@ -1,0 +1,79 @@
+# Levanta el sistema completo con un comando:
+#
+#   cp .env.docker.example .env && docker compose up --build
+#
+#   Nodo Local (PWA):  http://localhost:5173
+#   Nodo Central (API): http://localhost:8000/docs
+#
+# La base es PostGIS (Postgres + extensiones geoespaciales): sirve igual como
+# Postgres normal para la app, y deja listo el perfil `geo` (GeoServer, ver
+# sistema-ayuda-nacional/docs/geoserver-postgis.md) sin montar una segunda base.
+
+services:
+  base-de-datos:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ayuda}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ayuda-local}
+      POSTGRES_DB: ${POSTGRES_DB:-ayuda_terremoto}
+    volumes:
+      - datos-postgres:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"  # 5433 afuera para no chocar con un Postgres ya instalado
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ayuda} -d ${POSTGRES_DB:-ayuda_terremoto}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  nodo-central:
+    build:
+      context: ./sistema-ayuda-nacional
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ayuda}:${POSTGRES_PASSWORD:-ayuda-local}@base-de-datos:5432/${POSTGRES_DB:-ayuda_terremoto}
+      JWT_SECRET: ${JWT_SECRET:-cambia-esto-en-produccion}
+      NODOS_SECRETO_INICIAL: ${NODOS_SECRETO_INICIAL:-cambia-esto-en-produccion}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      WHATSAPP_APP_SECRET: ${WHATSAPP_APP_SECRET:-}
+      USHAHIDI_BASE_URL: ${USHAHIDI_BASE_URL:-}
+    ports:
+      - "8000:8000"
+    depends_on:
+      base-de-datos:
+        condition: service_healthy  # el startup siembra datos: la base tiene que estar lista de verdad
+
+  nodo-local:
+    build:
+      context: ./nodo-local
+      args:
+        # El navegador del usuario habla con la API desde afuera de la red de
+        # Docker, así que apunta a localhost, no al nombre del servicio.
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:8000}
+    ports:
+      - "5173:80"
+    depends_on:
+      - nodo-central
+
+  # Perfil opcional: capas WMS/WFS reales sobre la misma base PostGIS.
+  #   docker compose --profile geo up --build
+  # Guía completa en sistema-ayuda-nacional/docs/geoserver-postgis.md
+  geoserver:
+    image: docker.osgeo.org/geoserver:2.27.1
+    profiles: ["geo"]
+    environment:
+      GEOSERVER_ADMIN_USER: ${GEOSERVER_ADMIN_USER:-admin}
+      GEOSERVER_ADMIN_PASSWORD: ${GEOSERVER_ADMIN_PASSWORD:-geoserver-local}
+      SKIP_DEMO_DATA: "true"
+      CORS_ENABLED: "true"
+    volumes:
+      - datos-geoserver:/opt/geoserver_data
+    ports:
+      - "8080:8080"
+    depends_on:
+      base-de-datos:
+        condition: service_healthy
+
+volumes:
+  datos-postgres:
+  datos-geoserver:
