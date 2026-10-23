@@ -1,0 +1,43 @@
+# Chequeo de disponibilidad del despliegue (issue #9).
+#
+# No reemplaza a un monitor externo con alertas por SMS — para eso está
+# sistema-ayuda-nacional/docs/monitoreo.md. Esto es el piso gratuito: si el
+# servicio no responde, el workflow falla y GitHub avisa por correo a quien
+# mantiene el repositorio.
+name: Monitoreo de disponibilidad
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'  # cada 6 horas
+  workflow_dispatch:
+
+jobs:
+  salud:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar /salud del Nodo Central
+        run: |
+          URL="${API_URL:-https://ayuda-terremoto-nacional.onrender.com}/salud"
+          echo "Consultando $URL"
+
+          # El tier gratuito de Render duerme por inactividad: el primer
+          # request despierta el proceso y puede tardar ~50s. Se reintenta
+          # con margen antes de declararlo caído, para no alertar por algo
+          # que es comportamiento normal del plan.
+          for intento in 1 2 3 4 5; do
+            codigo=$(curl -sS -o respuesta.json -w '%{http_code}' --max-time 90 "$URL" || echo "000")
+            echo "intento $intento → HTTP $codigo"
+            if [ "$codigo" = "200" ]; then
+              cat respuesta.json
+              estado=$(python3 -c "import json;print(json.load(open('respuesta.json'))['estado'])")
+              [ "$estado" = "ok" ] && exit 0
+              echo "::error::El servicio responde pero se reporta '$estado'"
+              exit 1
+            fi
+            sleep 30
+          done
+
+          echo "::error::El Nodo Central no respondió 200 en /salud tras 5 intentos"
+          exit 1
+        env:
+          API_URL: ${{ vars.API_URL }}

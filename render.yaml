@@ -18,6 +18,9 @@ services:
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    # /salud consulta la base antes de responder 200; si la base no contesta
+    # devuelve 503 y Render no da el despliegue por bueno.
+    healthCheckPath: /salud
     envVars:
       - key: ENVIRONMENT
         value: production

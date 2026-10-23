@@ -512,3 +512,22 @@ def test_salud_reporta_ok_con_base_viva(client):
     assert datos["estado"] == "ok"
     assert datos["base_de_datos"] == "ok"
     assert datos["segundos_activo"] >= 0
+
+
+def test_salud_responde_503_si_la_base_no_contesta(client, monkeypatch):
+    """Un monitor externo necesita ver 503, no un 200 vacío, cuando la app
+    está arriba pero no puede hablar con la base."""
+    from app import main as main_module
+
+    class SesionRota:
+        def execute(self, *_args, **_kwargs):
+            raise RuntimeError("conexión perdida con la base")
+
+    main_module.app.dependency_overrides[get_db] = lambda: SesionRota()
+    try:
+        resp = client.get("/salud")
+    finally:
+        main_module.app.dependency_overrides.pop(get_db, None)
+
+    assert resp.status_code == 503
+    assert resp.json()["detail"]["estado"] == "degradado"
