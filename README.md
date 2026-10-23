@@ -31,6 +31,56 @@ entidades. Ninguna entidad legítima cobra por registrar a alguien como
 voluntario, damnificado o para un subsidio — ver la nota de seguridad en
 `planoidea.md` §9 sobre estafas activas confirmadas durante esta emergencia.
 
+## Cómo encaja todo
+
+```mermaid
+flowchart TB
+    subgraph entra["Por dónde entra un pedido de ayuda"]
+        wa["WhatsApp"]
+        ush["Ushahidi"]
+        portal["Portal público<br/>(sin login)"]
+    end
+
+    subgraph central["Nodo Central — sistema-ayuda-nacional/"]
+        api["API FastAPI"]
+        clasif["Clasificación y<br/>detección de duplicados"]
+        bd[("Postgres<br/>33 departamentos")]
+    end
+
+    subgraph usan["Quién usa lo que sale"]
+        coord["Panel de coordinador<br/>(offline-first)"]
+        inst["Instituciones<br/>HXL · WMS/WFS"]
+    end
+
+    usgs["USGS<br/>sismos en vivo"]
+
+    wa --> api
+    ush --> api
+    portal --> api
+    usgs -->|"activa centros<br/>donde tembló"| api
+    api --> clasif --> bd
+    bd --> coord
+    bd --> inst
+    coord -->|"entregas registradas<br/>aunque no haya señal"| api
+```
+
+El cuello de botella que ataca el proyecto no es falta de ayuda: es que cada
+canal sabe una parte y ninguno sabe el todo. El Nodo Central es la pieza que
+junta, y el nodo local es la que sigue funcionando cuando se cae la señal.
+
+## Levantarlo completo en un comando
+
+```bash
+cp .env.docker.example .env
+docker compose up --build
+```
+
+- Nodo Local (PWA): <http://localhost:5173>
+- Nodo Central (API): <http://localhost:8000/docs>
+
+Levanta Postgres, el backend y el portal juntos. Para correr cada pieza por
+separado (sin Docker), ver el README de cada subproyecto.
+
 ## Contenido de este repositorio
 
 - **[`planoidea.md`](planoidea.md)** — el documento de arquitectura completo:
@@ -57,10 +107,22 @@ voluntario, damnificado o para un subsidio — ver la nota de seguridad en
 
 ## Qué falta (honesto)
 
-Capas geoespaciales WMS/WFS reales compatibles con ICDE/SNIGRD — requieren un
-GeoServer y una instancia PostGIS en vivo conectada a datos oficiales, que es
-infraestructura de despliegue, no solo código. `sistema-ayuda-nacional/` usa
-lat/lon simples mientras tanto, suficiente para el pipeline y los exports.
+**Verificación de negocio con Meta** para usar la API real de WhatsApp
+Business Cloud. El código del webhook está completo y valida la firma de
+Meta; lo que falta es un trámite —  Meta exige una entidad legal registrada
+con documentos, y este es un proyecto de código abierto sin una detrás. Ver
+[el issue #8](https://github.com/Julian-Rincon/ayuda-terremoto-colombia/issues/8):
+queda abierto a propósito, esperando a una organización que ya tenga cuenta
+verificada. Mientras tanto el canal corre en modo sandbox.
+
+**Reverificar contactos antes de un uso real.** Varios centros territoriales
+están sembrados con `contacto_verificado = false` justamente porque nadie los
+confirmó todavía. El sistema no los muestra como verificados, pero quien
+despliegue esto para una emergencia real tiene que completarlos.
+
+Las capas geoespaciales WMS/WFS, que antes estaban en esta lista, ya están
+implementadas: ver
+[la guía de GeoServer + PostGIS](sistema-ayuda-nacional/docs/geoserver-postgis.md).
 
 ## Cómo contribuir
 
@@ -70,6 +132,13 @@ README con instrucciones para levantarlo en local. Si vas a desplegar el
 backend para una emergencia real, revisa primero las notas de "próximos
 pasos honestos" en su README — hay datos (contactos, canales) que deben
 reverificarse antes de mostrarse a nadie más.
+
+## Seguridad
+
+Si encontrás una vulnerabilidad, **no abras un issue público** — ver
+[`SECURITY.md`](SECURITY.md), que además documenta qué datos personales
+guarda el sistema y qué nunca debe aparecer en un issue, un log o una
+captura de pantalla.
 
 ## Licencia
 

@@ -19,6 +19,24 @@ Tiene dos caras:
 
 ## Cómo funciona el offline-first
 
+```mermaid
+flowchart TB
+    acc["Coordinador registra<br/>un reporte o una entrega"] --> idb[("IndexedDB local<br/>cola 'outbox'")]
+    idb --> red{"¿Hay señal?"}
+    red -->|no| pend["Queda pendiente<br/>la app sigue funcionando"]
+    red -->|sí| env["Enviar al Nodo Central"]
+    env --> ok{"¿Aceptado?"}
+    ok -->|sí| listo["Marcado sincronizado"]
+    ok -->|no| err["Marcado con el error<br/>se reintenta después"]
+    pend --> online["Evento 'online'<br/>o botón Sincronizar"]
+    err --> online
+    online --> env
+```
+
+Nada se escribe directo a la red: primero al dispositivo, después al Nodo
+Central. Por eso una entrega registrada en un sitio sin cobertura no se
+pierde — espera.
+
 Todo lo que el usuario hace (registrar un reporte, marcar una entrega) se
 escribe primero en **IndexedDB local** (`src/db.js`, cola `outbox`), nunca
 directo a la red. Después, si hay conexión, se intenta sincronizar de
@@ -35,7 +53,24 @@ Central) también se guarda en IndexedDB — se necesita conexión para el login
 inicial, pero después el centro puede seguir trabajando offline durante toda
 su sesión.
 
+El token de acceso dura 12 horas y un turno de coordinación puede durar más,
+así que el login también entrega un **token de refresco** (30 días) y
+`src/sesion.js` renueva el acceso solo: al recuperar conexión, cada 30
+minutos, y antes de vaciar la cola offline. Un fallo de red nunca cierra la
+sesión — solo la cierra un rechazo explícito del backend. Nadie debería
+tener que volver a escribir el secreto del territorio a mitad de una
+entrega.
+
 ## Levantar en local
+
+Con Docker, desde la raíz del repositorio, esto levanta el portal junto con
+el backend y su base:
+
+```bash
+cp .env.docker.example .env && docker compose up --build
+```
+
+A mano, solo el portal (necesita un Nodo Central corriendo aparte):
 
 ```bash
 npm install

@@ -50,6 +50,48 @@ espacio para que un humano lo complete después. `GET /api/v1/resumen`
 cuenta solo centros `activo=True` en `total_centros`, así que el panorama
 público nunca exagera cuánta cobertura real hay.
 
+## El recorrido de un pedido de ayuda
+
+De un vistazo, lo que le pasa a un mensaje desde que alguien lo manda hasta
+que la ayuda llega:
+
+```mermaid
+flowchart LR
+    msg["Alguien reporta<br/>WhatsApp · Ushahidi · portal"] --> rep["ReporteCiudadano<br/>sin verificar"]
+    rep --> dup{"¿Parecido a<br/>otro reporte?"}
+    dup -->|sí| marca["Marcado como posible<br/>duplicado — lo decide<br/>una persona, nunca el sistema"]
+    dup -->|no| espera
+    marca --> espera["Esperando verificación"]
+    espera --> ver["Un coordinador<br/>lo verifica"]
+    ver --> sol["Solicitud<br/>pendiente"]
+    sol --> env["Envío en camino<br/>desde otra ciudad"]
+    env --> ent["Entrega registrada<br/>→ solicitud completada"]
+```
+
+Nada salta pasos: un reporte sin verificar no genera solicitud, y el sistema
+nunca fusiona ni descarta duplicados por su cuenta — solo los marca para que
+alguien decida (`app/dedup.py`).
+
+El otro flujo, el que corre solo, es la activación de centros:
+
+```mermaid
+sequenceDiagram
+    participant U as USGS
+    participant P as Poll (cada 60s)
+    participant C as Centro del departamento
+    participant N as Panorama nacional
+
+    U->>P: sismo con magnitud y coordenadas
+    P->>P: ¿en Colombia? ¿qué departamento?
+    alt magnitud ≥ 4.0
+        P->>C: activar (sin inventar contacto)
+    end
+    alt magnitud ≥ 6.0
+        P->>N: modo emergencia nacional
+    end
+    Note over C: Un coordinador también puede<br/>activar a mano desde el mapa
+```
+
 ## Qué es real y qué es sandbox
 
 | Integración | Estado | Detalle |
@@ -65,6 +107,15 @@ poner la variable de entorno correspondiente en `.env` — el código no
 cambia, mismo patrón que ya usa `ai_helper.py` con Groq.
 
 ## Levantar en local (5 minutos)
+
+Con Docker, desde la raíz del repositorio, esto levanta el backend, Postgres
+y el portal juntos:
+
+```bash
+cp .env.docker.example .env && docker compose up --build
+```
+
+A mano, solo el backend:
 
 ```bash
 python3 -m venv .venv
@@ -141,7 +192,9 @@ pasa igual contra SQLite y contra Postgres 16 real.
 | PATCH | `/api/v1/centros/{id}/activar` | Activar a mano un centro dormido (ver "Cobertura nacional" arriba) |
 | GET | `/api/v1/centros/{id}/necesidades` | Necesidades pendientes agregadas por categoría |
 | POST | `/api/v1/centros/{id}/entregas` | Marcar una solicitud como entregada (requiere JWT del centro) |
-| POST | `/api/v1/auth/token` | Login de un centro local (`id_territorio` + secreto → JWT) |
+| POST | `/api/v1/auth/token` | Login de un centro local (`id_territorio` + secreto → token de acceso + token de refresco) |
+| POST | `/api/v1/auth/refrescar` | Cambiar un token de refresco vigente por un par nuevo, sin volver a pedir el secreto |
+| GET | `/salud` | Chequeo para monitoreo externo: consulta la base y responde 503 si no contesta ([guía](docs/monitoreo.md)) |
 | POST | `/api/v1/reportes` | Crear reporte manual/web (clasificación automática) |
 | GET | `/api/v1/reportes?verificado=false` | Cola de verificación |
 | POST | `/api/v1/reportes/{id}/verificar` | Verificación humana → crea Solicitud formal |
