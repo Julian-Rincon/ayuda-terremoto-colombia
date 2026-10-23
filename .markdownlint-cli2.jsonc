@@ -1,0 +1,23 @@
+// Qué archivos se lintean. Las REGLAS viven en .markdownlint.jsonc; acá
+// solo se dice sobre qué corren.
+//
+// Existe para que `npx markdownlint-cli2`, sin argumentos, haga lo mismo en
+// la máquina de quien contribuye y en CI. Las exclusiones son markdown de
+// dependencias instaladas: no es nuestro, no lo podemos arreglar, y en CI
+// ni siquiera existe. Un lint que escupe cincuenta errores ajenos es un
+// lint que nadie corre antes de abrir el PR.
+{
+  "globs": ["**/*.md"],
+  "ignores": [
+    "node_modules",
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/venv/**",
+    "**/dist/**",
+    // Planes de trabajo locales de la raíz: no están versionados
+    // (ver .gitignore), así que en CI no existen.
+    "docs/**",
+    // Memoria local de sesiones de la herramienta, no documentación.
+    ".remember/**"
+  ]
+}

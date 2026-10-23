@@ -127,6 +127,19 @@ Las capas geoespaciales WMS/WFS, que antes estaban en esta lista, ya están
 implementadas: ver
 [la guía de GeoServer + PostGIS](sistema-ayuda-nacional/docs/geoserver-postgis.md).
 
+## Guías
+
+| Guía | Para qué |
+|---|---|
+| [Conectar tu propio WhatsApp](sistema-ayuda-nacional/docs/whatsapp-meta.md) | Enchufar un número real de WhatsApp Business a tu despliegue |
+| [GeoServer + PostGIS](sistema-ayuda-nacional/docs/geoserver-postgis.md) | Publicar capas WMS/WFS para que otras entidades consuman los datos |
+| [Monitoreo y alertas](sistema-ayuda-nacional/docs/monitoreo.md) | Enterarse de que se cayó sin estar mirando el dashboard |
+| [Migración a Neon](sistema-ayuda-nacional/docs/migracion-neon.md) | Plan B de base de datos gratuita |
+| [Pruebas de carga](sistema-ayuda-nacional/docs/pruebas-carga.md) | Cuánto aguanta el backend y dónde empieza a doler |
+| [Accesibilidad y PWA](nodo-local/docs/accesibilidad-pwa.md) | Navegación por teclado, contraste, instalación offline |
+| [Política de seguridad](SECURITY.md) | Reportar una vulnerabilidad y qué datos personales se manejan |
+| [Registro de cambios](CHANGELOG.md) | Qué cambió y por qué |
+
 ## Cómo contribuir
 
 Ver [`CONTRIBUTING.md`](CONTRIBUTING.md) — reglas del proyecto y cómo
