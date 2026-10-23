@@ -577,3 +577,83 @@ def test_el_telefono_si_se_guarda_en_la_base(client):
     reporte = db.query(models.ReporteCiudadano).filter_by(canal=models.CanalReporte.whatsapp).first()
     assert reporte.id_externo == "573009998877"
     db.close()
+
+
+def test_webhook_whatsapp_responde_el_challenge_de_meta(client, monkeypatch):
+    """Sin esto, el panel de Meta se niega a guardar la URL del webhook y
+    nadie puede conectar su número a este despliegue."""
+    monkeypatch.setenv("WHATSAPP_VERIFY_TOKEN", "token-de-este-despliegue")
+
+    resp = client.get("/api/v1/webhooks/whatsapp", params={
+        "hub.mode": "subscribe",
+        "hub.verify_token": "token-de-este-despliegue",
+        "hub.challenge": "987654321",
+    })
+
+    assert resp.status_code == 200
+    assert resp.text == "987654321"  # texto plano exacto, sin comillas JSON
+    assert resp.headers["content-type"].startswith("text/plain")
+
+
+def test_webhook_whatsapp_rechaza_un_token_ajeno(client, monkeypatch):
+    monkeypatch.setenv("WHATSAPP_VERIFY_TOKEN", "el-nuestro")
+    resp = client.get("/api/v1/webhooks/whatsapp", params={
+        "hub.mode": "subscribe", "hub.verify_token": "el-de-otro", "hub.challenge": "123",
+    })
+    assert resp.status_code == 403
+
+
+def test_webhook_whatsapp_sin_configurar_responde_503(client, monkeypatch):
+    """503 y no 403: el problema es de este despliegue, no de quien pregunta.
+    El mensaje tiene que decirle a quien despliega qué le falta."""
+    monkeypatch.delenv("WHATSAPP_VERIFY_TOKEN", raising=False)
+    resp = client.get("/api/v1/webhooks/whatsapp", params={
+        "hub.mode": "subscribe", "hub.verify_token": "lo-que-sea", "hub.challenge": "123",
+    })
+    assert resp.status_code == 503
+    assert "WHATSAPP_VERIFY_TOKEN" in resp.json()["detail"]
+
+
+def test_estado_de_integraciones_distingue_real_de_sandbox(client, monkeypatch):
+    monkeypatch.delenv("WHATSAPP_APP_SECRET", raising=False)
+    monkeypatch.delenv("WHATSAPP_VERIFY_TOKEN", raising=False)
+    monkeypatch.delenv("USHAHIDI_BASE_URL", raising=False)
+
+    datos = client.get("/api/v1/config/integraciones").json()
+    assert datos["whatsapp"]["modo"] == "sandbox"
+    assert datos["ushahidi"].startswith("sandbox")
+    assert datos["usgs"] == "real"
+
+    monkeypatch.setenv("WHATSAPP_APP_SECRET", "x")
+    monkeypatch.setenv("WHATSAPP_VERIFY_TOKEN", "y")
+    assert client.get("/api/v1/config/integraciones").json()["whatsapp"]["modo"] == "real"
+
+
+def test_estado_de_integraciones_no_devuelve_ningun_secreto(client, monkeypatch):
+    monkeypatch.setenv("WHATSAPP_APP_SECRET", "secreto-de-firma")
+    monkeypatch.setenv("WHATSAPP_VERIFY_TOKEN", "secreto-de-verificacion")
+    monkeypatch.setenv("GROQ_API_KEY", "gsk-secreto")
+    cuerpo = client.get("/api/v1/config/integraciones").text
+    for secreto in ("secreto-de-firma", "secreto-de-verificacion", "gsk-secreto"):
+        assert secreto not in cuerpo
+
+
+def test_webhook_whatsapp_guarda_el_reporte_aunque_no_pueda_responder(client, monkeypatch):
+    """El acuse es opcional y va en segundo plano: el reporte se guarda igual."""
+    from app import models
+
+    monkeypatch.delenv("WHATSAPP_APP_SECRET", raising=False)  # modo sandbox: no exige firma
+    monkeypatch.delenv("WHATSAPP_TOKEN", raising=False)       # sin credenciales de salida
+
+    resp = client.post("/api/v1/webhooks/whatsapp", json={
+        "entry": [{"changes": [{"value": {"messages": [
+            {"from": "573005556677", "type": "text", "text": {"body": "Necesitamos carpas"}}
+        ]}}]}]
+    })
+
+    assert resp.status_code == 200
+    assert resp.json()["procesado"] is True
+
+    db = client.db_sessionmaker()
+    assert db.query(models.ReporteCiudadano).filter_by(id_externo="573005556677").count() == 1
+    db.close()

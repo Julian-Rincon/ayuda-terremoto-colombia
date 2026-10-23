@@ -107,13 +107,16 @@ separado (sin Docker), ver el README de cada subproyecto.
 
 ## Qué falta (honesto)
 
-**Verificación de negocio con Meta** para usar la API real de WhatsApp
-Business Cloud. El código del webhook está completo y valida la firma de
-Meta; lo que falta es un trámite —  Meta exige una entidad legal registrada
-con documentos, y este es un proyecto de código abierto sin una detrás. Ver
-[el issue #8](https://github.com/Julian-Rincon/ayuda-terremoto-colombia/issues/8):
-queda abierto a propósito, esperando a una organización que ya tenga cuenta
-verificada. Mientras tanto el canal corre en modo sandbox.
+**Un número de WhatsApp conectado.** No es algo que falte implementar: el
+código del canal está completo —  handshake de verificación de Meta,
+validación de firma, parseo del formato real y acuse de recibo opcional. Lo
+que pasa es que la cuenta de WhatsApp Business queda a nombre de una
+organización concreta, así que **quien despliegue esto conecta su propio
+número** con cuatro variables de entorno, sin tocar código. La guía paso a
+paso está en
+[docs/whatsapp-meta.md](sistema-ayuda-nacional/docs/whatsapp-meta.md).
+Mientras tanto el canal corre en modo sandbox y el sistema funciona completo
+por web, Ushahidi y carga manual.
 
 **Reverificar contactos antes de un uso real.** Varios centros territoriales
 están sembrados con `contacto_verificado = false` justamente porque nadie los

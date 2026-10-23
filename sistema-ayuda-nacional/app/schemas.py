@@ -206,3 +206,11 @@ class EstadoSalud(BaseModel):
     base_de_datos: str
     version: str
     segundos_activo: int
+
+
+class EstadoIntegraciones(BaseModel):
+    whatsapp: dict
+    ushahidi: str
+    clasificacion_ia: str
+    usgs: str
+    entorno: str

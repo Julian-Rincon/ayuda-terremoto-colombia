@@ -99,7 +99,7 @@ sequenceDiagram
 | USGS (alertas sísmicas) | **Real** | API pública gratuita, sin credenciales. Poll cada 60s a `earthquake.usgs.gov`. |
 | Clasificación de reportes | **Real** (con fallback) | Groq/Llama gratis si hay `GROQ_API_KEY`; si no, clasificador por reglas — nunca falla. |
 | Export HXL | **Real** | Solo formatea datos locales, sin dependencias externas. |
-| WhatsApp Business Cloud API | **Sandbox** | El webhook usa el formato real de Meta y valida `X-Hub-Signature-256` — pero sin `WHATSAPP_APP_SECRET` configurado, no exige firma (modo desarrollo). Usa `POST /sandbox/whatsapp/simular` para probar sin cuenta Meta real. Lo que falta es el trámite de verificación con Meta, no código: ver [docs/whatsapp-meta.md](docs/whatsapp-meta.md). |
+| WhatsApp Business Cloud API | **Sandbox, conectable** | El código está completo: handshake de verificación, validación de `X-Hub-Signature-256`, parseo del formato real de Meta y acuse de recibo opcional. Este despliegue no trae un número conectado — la cuenta queda a nombre de una organización, así que **quien levante el sistema conecta el suyo** con cuatro variables de entorno, sin tocar código: [docs/whatsapp-meta.md](docs/whatsapp-meta.md). Mientras tanto se prueba con `POST /sandbox/whatsapp/simular`. |
 | Ushahidi Platform | **Sandbox** | Cliente REST v5 real; si no hay `USHAHIDI_BASE_URL` configurada, sirve una fixture con la misma forma. Dispara con `POST /api/v1/integraciones/ushahidi/sincronizar`. |
 
 Para activar cualquiera de las dos integraciones sandbox, solo hay que
@@ -198,7 +198,9 @@ pasa igual contra SQLite y contra Postgres 16 real.
 | POST | `/api/v1/reportes` | Crear reporte manual/web (clasificación automática) |
 | GET | `/api/v1/reportes?verificado=false` | Cola de verificación |
 | POST | `/api/v1/reportes/{id}/verificar` | Verificación humana → crea Solicitud formal |
+| GET | `/api/v1/webhooks/whatsapp` | Handshake de verificación que Meta exige para conectar un número ([guía](docs/whatsapp-meta.md)) |
 | POST | `/api/v1/webhooks/whatsapp` | Webhook real de WhatsApp Cloud API (sandbox si no hay firma configurada) |
+| GET | `/api/v1/config/integraciones` | Qué corre en modo real y qué en sandbox en este despliegue (sin exponer secretos) |
 | POST | `/sandbox/whatsapp/simular` | Simular un mensaje de WhatsApp entrante |
 | POST | `/api/v1/integraciones/ushahidi/sincronizar` | Sincronizar posts nuevos desde Ushahidi (o fixture) |
 | GET | `/api/v1/eventos-sismicos/ultimo` | Último evento sísmico detectado por USGS |

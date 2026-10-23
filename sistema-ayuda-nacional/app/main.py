@@ -1,9 +1,10 @@
 import asyncio
+import os
 import time
 from datetime import datetime, timedelta
 from typing import List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 from slowapi import _rate_limit_exceeded_handler
@@ -14,7 +15,7 @@ from sqlalchemy.orm import Session
 
 from . import auth, dedup, models, pipeline, schemas, seed_data
 from .ai_helper import clasificar_reporte, generar_resumen_necesidades, generar_resumen_sismico
-from .config_checks import verificar_secretos_de_produccion
+from .config_checks import advertir_configuracion_parcial_whatsapp, verificar_secretos_de_produccion
 from .database import Base, engine, get_db
 from .hxl_export import generar_sitrep_hxl
 from .integrations import usgs, whatsapp
@@ -23,6 +24,7 @@ from .rate_limit import limiter
 from .websocket_manager import manager
 
 verificar_secretos_de_produccion()
+advertir_configuracion_parcial_whatsapp()
 
 Base.metadata.create_all(bind=engine)
 
@@ -100,6 +102,24 @@ def salud(db: Session = Depends(get_db)):
     if not base_ok:
         raise HTTPException(503, estado.model_dump())
     return estado
+
+
+@app.get("/api/v1/config/integraciones", response_model=schemas.EstadoIntegraciones)
+def estado_integraciones():
+    """
+    Qué corre en modo real y qué en sandbox en ESTE despliegue. No devuelve
+    ningún secreto — solo si está configurado o no.
+
+    Existe para que quien despliega confirme que sus variables tomaron efecto
+    sin tener que leer logs ni exponer el entorno.
+    """
+    return schemas.EstadoIntegraciones(
+        whatsapp=whatsapp.estado_integracion(),
+        ushahidi="real" if os.getenv("USHAHIDI_BASE_URL", "").strip() else "sandbox (fixture)",
+        clasificacion_ia="groq" if os.getenv("GROQ_API_KEY", "").strip() else "reglas locales",
+        usgs="real",  # API pública sin credenciales: siempre real
+        entorno=os.getenv("ENVIRONMENT", "development"),
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -337,8 +357,29 @@ async def verificar_reporte(reporte_id: int, payload: schemas.ReporteVerificar, 
 # Webhooks e integraciones (sandbox salvo USGS)
 # ---------------------------------------------------------------------------
 
+@app.get("/api/v1/webhooks/whatsapp", response_class=PlainTextResponse)
+def verificar_webhook_whatsapp(
+    hub_mode: Optional[str] = Query(None, alias="hub.mode"),
+    hub_verify_token: Optional[str] = Query(None, alias="hub.verify_token"),
+    hub_challenge: Optional[str] = Query(None, alias="hub.challenge"),
+):
+    """
+    Handshake que Meta exige para conectar un número. Antes de mandar un solo
+    mensaje hace un GET acá con el token que eligió quien despliega y un
+    `hub.challenge`; si la respuesta no es exactamente ese challenge en texto
+    plano, el panel de Meta se niega a guardar la URL del webhook.
+    """
+    try:
+        return whatsapp.resolver_verificacion(hub_mode, hub_verify_token, hub_challenge)
+    except whatsapp.WebhookNoConfigurado as error:
+        # 503, no 403: el problema es de este despliegue, no de quien pregunta.
+        raise HTTPException(503, str(error))
+    except whatsapp.VerificacionRechazada as error:
+        raise HTTPException(403, str(error))
+
+
 @app.post("/api/v1/webhooks/whatsapp")
-async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
+async def webhook_whatsapp(request: Request, tareas: BackgroundTasks, db: Session = Depends(get_db)):
     cuerpo = await request.body()
     firma = request.headers.get("X-Hub-Signature-256")
     if not auth.validar_firma_whatsapp(cuerpo, firma):
@@ -355,6 +396,12 @@ async def webhook_whatsapp(request: Request, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(reporte)
     await manager.broadcast("nuevo_reporte", schemas.ReporteCiudadanoOut.model_validate(reporte).model_dump())
+
+    # El acuse va en segundo plano: Meta espera una respuesta rápida al
+    # webhook y reintenta el mensaje si tarda. Que el reporte quede guardado
+    # no puede depender de que la API de salida conteste.
+    tareas.add_task(whatsapp.enviar_acuse_de_recibo, mensaje["remitente"])
+
     return {"recibido": True, "procesado": True, "reporte_id": reporte.id}
 
 
