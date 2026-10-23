@@ -12,6 +12,11 @@ logger = logging.getLogger(__name__)
 VALOR_POR_DEFECTO = "cambia-esto-en-produccion"
 SECRETOS_REQUERIDOS = ("JWT_SECRET", "NODOS_SECRETO_INICIAL")
 
+# RFC 7518 §3.2: para HS256 la clave debe tener al menos el tamaño del hash,
+# 32 bytes. Una clave más corta se puede atacar por fuerza bruta aunque no
+# sea el valor de ejemplo — y "lo cambié" no implica "es fuerte".
+LONGITUD_MINIMA_JWT_SECRET = 32
+
 
 def verificar_secretos_de_produccion() -> None:
     if os.getenv("ENVIRONMENT", "development") != "production":
@@ -23,6 +28,15 @@ def verificar_secretos_de_produccion() -> None:
             f"ENVIRONMENT=production pero {', '.join(sin_rotar)} sigue con el valor de "
             "ejemplo de .env.example. Genera un valor real y único antes de desplegar "
             "(ver README, sección Seguridad y confianza)."
+        )
+
+    jwt_secret = os.getenv("JWT_SECRET", "")
+    if len(jwt_secret.encode()) < LONGITUD_MINIMA_JWT_SECRET:
+        raise RuntimeError(
+            f"ENVIRONMENT=production pero JWT_SECRET tiene {len(jwt_secret.encode())} bytes "
+            f"y HS256 necesita al menos {LONGITUD_MINIMA_JWT_SECRET} (RFC 7518 §3.2). "
+            "Una clave corta se puede romper por fuerza bruta aunque la hayas cambiado. "
+            "Genera una con: openssl rand -hex 32"
         )
 
 

@@ -70,3 +70,34 @@ def test_whatsapp_apagado_del_todo_no_advierte_nada(monkeypatch):
         monkeypatch.delenv(var, raising=False)
 
     assert config_checks.advertir_configuracion_parcial_whatsapp() == []
+
+
+def test_produccion_rechaza_un_jwt_secret_corto(monkeypatch):
+    """Cambiar el secreto no basta: 'clave123' no es el valor de ejemplo pero
+    se rompe por fuerza bruta igual."""
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("JWT_SECRET", "clave123")
+    monkeypatch.setenv("NODOS_SECRETO_INICIAL", "un-secreto-de-nodo-suficientemente-largo")
+
+    with pytest.raises(RuntimeError) as exc_info:
+        verificar_secretos_de_produccion()
+
+    assert "JWT_SECRET" in str(exc_info.value)
+    assert "openssl rand -hex 32" in str(exc_info.value)
+
+
+def test_produccion_acepta_un_jwt_secret_de_32_bytes(monkeypatch):
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    monkeypatch.setenv("JWT_SECRET", "a" * 32)
+    monkeypatch.setenv("NODOS_SECRETO_INICIAL", "otro-secreto-real-y-largo-de-verdad")
+
+    verificar_secretos_de_produccion()  # no debe lanzar
+
+
+def test_en_desarrollo_no_se_exige_longitud(monkeypatch):
+    """El valor de ejemplo tiene 25 bytes: exigir 32 en desarrollo rompería
+    el arranque local de cualquiera que clone el repositorio."""
+    monkeypatch.setenv("ENVIRONMENT", "development")
+    monkeypatch.setenv("JWT_SECRET", "corto")
+
+    verificar_secretos_de_produccion()  # no debe lanzar

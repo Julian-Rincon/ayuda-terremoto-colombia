@@ -35,6 +35,18 @@ El proyecto no publica versiones etiquetadas: lo que se mantiene es `main`.
   número de quien escribió. El número se sigue guardando; ya no sale por la
   API ni por el WebSocket.
 
+### Seguridad
+
+- **PyJWT 2.13 → 2.15**: 15 vulnerabilidades conocidas en la librería que
+  valida los tokens de autenticación. Con esto, `pip-audit` sobre el backend
+  y `npm audit` sobre el frontend dan cero.
+- **El guardia de producción ahora exige un `JWT_SECRET` de 32 bytes.**
+  Antes solo verificaba que no fuera el valor de ejemplo, así que un
+  `JWT_SECRET=clave123` pasaba — cambiado, pero rompible por fuerza bruta
+  (RFC 7518 §3.2).
+- Vitest 3 → 5 en desarrollo, por vulnerabilidades en `@vitest/mocker` y
+  `tinypool`.
+
 ### Cambiado
 
 - APIs deprecadas reemplazadas: `datetime.utcnow()` (con fecha de
