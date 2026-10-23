@@ -1,0 +1,57 @@
+# Auditoría de dependencias.
+#
+# Va aparte de CI y NO bloquea los PRs a propósito: una CVE publicada hoy en
+# una dependencia transitiva pondría en rojo el PR de alguien que solo
+# corrigió una palabra en un README, y la lección que se aprende de eso es a
+# ignorar el rojo. Corre semanal; si encuentra algo, el workflow falla y
+# GitHub avisa por correo a quien mantiene el repositorio.
+name: Auditoría de dependencias
+
+on:
+  schedule:
+    - cron: '0 12 * * 1'  # lunes a las 12:00 UTC
+  workflow_dispatch:
+
+jobs:
+  backend:
+    name: Backend (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar pip-audit
+        run: pip install pip-audit
+
+      - name: Auditar requirements.txt
+        run: pip-audit -r sistema-ayuda-nacional/requirements.txt
+
+  frontend:
+    name: Frontend (npm audit)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: nodo-local
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: nodo-local/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Las de producción son las que corren en el navegador de la gente:
+      # cualquier hallazgo ahí es grave. Las de desarrollo se revisan
+      # igual, pero sin tumbar el job por una herramienta de pruebas.
+      - name: Auditar dependencias de producción
+        run: npm audit --omit=dev
+
+      - name: Auditar dependencias de desarrollo (informativo)
+        run: npm audit || true

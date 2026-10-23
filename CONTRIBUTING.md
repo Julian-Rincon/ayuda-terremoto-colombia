@@ -89,6 +89,20 @@ Un PR que rompe tests existentes no se mergea hasta que se arregle.
 - **Usá `Closes #N` en inglés** en la descripción del PR. GitHub no cierra
   issues con "Cierra #N", y ya nos pasó.
 
+### Dependencias
+
+Una auditoría semanal corre `pip-audit` y `npm audit`. Si vas a agregar una
+dependencia, revisá antes que no traiga hallazgos:
+
+```bash
+pip-audit -r sistema-ayuda-nacional/requirements.txt
+cd nodo-local && npm audit
+```
+
+Versiones fijas (`==` en `requirements.txt`): este sistema tiene que arrancar
+igual dentro de seis meses, en una emergencia, sin que una dependencia haya
+cambiado de comportamiento por debajo.
+
 ## Si encontrás una vulnerabilidad
 
 No abras un issue público. Ver [SECURITY.md](SECURITY.md) — el repositorio
