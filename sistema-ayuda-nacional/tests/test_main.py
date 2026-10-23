@@ -531,3 +531,49 @@ def test_salud_responde_503_si_la_base_no_contesta(client, monkeypatch):
 
     assert resp.status_code == 503
     assert resp.json()["detail"]["estado"] == "degradado"
+
+
+def test_listar_reportes_nunca_expone_el_telefono_de_whatsapp(client):
+    """/api/v1/reportes es público: un reporte de WhatsApp no puede llevar el
+    número de quien pidió ayuda."""
+    from app import models
+
+    db = client.db_sessionmaker()
+    db.add(models.ReporteCiudadano(
+        id_externo="573001234567",
+        canal=models.CanalReporte.whatsapp,
+        contenido_original="Necesitamos agua en el barrio",
+    ))
+    db.add(models.ReporteCiudadano(
+        id_externo="4321",
+        canal=models.CanalReporte.ushahidi,
+        contenido_original="Reporte desde Ushahidi",
+    ))
+    db.commit()
+    db.close()
+
+    reportes = client.get("/api/v1/reportes").json()
+    cuerpo = client.get("/api/v1/reportes").text
+
+    por_canal = {r["canal"]: r for r in reportes}
+    assert por_canal["whatsapp"]["id_externo"] is None
+    # El id de un post de Ushahidi ya es público y sirve para rastrear: ese sí.
+    assert por_canal["ushahidi"]["id_externo"] == "4321"
+    assert "573001234567" not in cuerpo
+
+
+def test_el_telefono_si_se_guarda_en_la_base(client):
+    """Ocultarlo en la respuesta no significa perderlo: la coordinación tiene
+    que poder rastrear un reporte hasta su origen."""
+    from app import models
+
+    respuesta = client.post("/sandbox/whatsapp/simular", json={
+        "remitente": "573009998877", "texto": "Sin agua hace dos días",
+    })
+    assert respuesta.status_code == 200
+    assert respuesta.json()["id_externo"] is None  # tampoco sale por acá
+
+    db = client.db_sessionmaker()
+    reporte = db.query(models.ReporteCiudadano).filter_by(canal=models.CanalReporte.whatsapp).first()
+    assert reporte.id_externo == "573009998877"
+    db.close()

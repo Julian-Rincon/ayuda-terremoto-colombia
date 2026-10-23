@@ -76,7 +76,7 @@ No hace falta reportarlo (ya lo sabemos y es deliberado):
 |---|---|---|
 | Texto libre del reporte ciudadano | `reportes_ciudadanos.contenido_original` | Puede contener nombres, direcciones o teléfonos que la persona escribió |
 | Coordenadas y zona del reporte | `reportes_ciudadanos.lat/lon/zona` | Opcional |
-| Identificador del mensaje de origen | `reportes_ciudadanos.id_externo` | Permite rastrear hasta el canal (WhatsApp, Ushahidi) |
+| Identificador del mensaje de origen | `reportes_ciudadanos.id_externo` | Para WhatsApp **es el número de quien escribió**. Se guarda para poder rastrear el reporte, pero la API pública nunca lo devuelve (`ReporteCiudadanoOut` lo anula para ese canal). Para Ushahidi es el id del post, que ya es público |
 | Nombre, zona y contacto de un colectivo | `colectivos` | Se registra en público, pero sigue siendo un dato de contacto real |
 | Contacto de un centro territorial | `centros_locales.contacto` | Se muestra solo si `contacto_verificado` |
 | Hash del secreto de cada nodo | `nodo_credenciales.secreto_hash` | bcrypt; el secreto en claro no se guarda nunca |

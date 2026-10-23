@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from .models import CanalReporte, CategoriaNecesidad, EstadoEnvio, EstadoSolicitud, TipoColectivo, UrgenciaReporte
 
@@ -30,7 +30,15 @@ class ReporteCiudadanoCreate(BaseModel):
 
 
 class ReporteCiudadanoOut(BaseModel):
+    """
+    Forma pública de un reporte. `GET /api/v1/reportes` no pide autenticación
+    a propósito (la cola de verificación tiene que ser auditable por
+    cualquiera), así que todo lo que salga por acá es público.
+    """
+
     id: int
+    # Para Ushahidi es el id del post, que ya es público. Para WhatsApp es el
+    # número de quien escribió: eso NUNCA sale (ver _ocultar_remitente abajo).
     id_externo: Optional[str]
     canal: CanalReporte
     contenido_original: str
@@ -48,6 +56,19 @@ class ReporteCiudadanoOut(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode="after")
+    def _ocultar_remitente(self):
+        """
+        El número de teléfono de quien pidió ayuda por WhatsApp se guarda para
+        poder rastrear el reporte hasta su origen, pero no puede salir por una
+        API pública: sería una lista de personas vulnerables y cómo
+        contactarlas, justo durante la emergencia en que circulan estafas
+        suplantando a las organizaciones de ayuda.
+        """
+        if self.canal == CanalReporte.whatsapp:
+            self.id_externo = None
+        return self
 
 
 class ReporteVerificar(BaseModel):
