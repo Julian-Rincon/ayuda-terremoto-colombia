@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from app.tiempo import ahora_utc
 from app import dedup, models
 
 
@@ -9,7 +10,7 @@ def _crear_reporte(db, contenido, categoria=models.CategoriaNecesidad.agua, zona
         contenido_original=contenido,
         categoria=categoria,
         zona=zona,
-        creado_en=creado_en or datetime.utcnow(),
+        creado_en=creado_en or ahora_utc(),
     )
     db.add(reporte)
     db.commit()
@@ -49,7 +50,7 @@ def test_no_marca_duplicado_si_la_categoria_es_distinta(db_session):
 
 
 def test_no_marca_duplicado_si_esta_fuera_de_la_ventana_de_tiempo(db_session):
-    hace_tres_dias = datetime.utcnow() - timedelta(hours=72)
+    hace_tres_dias = ahora_utc() - timedelta(hours=72)
     _crear_reporte(db_session, "Familia sin agua potable en el barrio Cuba", creado_en=hace_tres_dias)
 
     duplicado = dedup.encontrar_posible_duplicado(

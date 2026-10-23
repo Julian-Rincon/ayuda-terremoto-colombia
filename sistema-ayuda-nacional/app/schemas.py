@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from .models import CanalReporte, CategoriaNecesidad, EstadoEnvio, EstadoSolicitud, TipoColectivo, UrgenciaReporte
 
@@ -17,8 +17,7 @@ class CentroLocalOut(BaseModel):
     lat: Optional[float]
     lon: Optional[float]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ReporteCiudadanoCreate(BaseModel):
@@ -54,8 +53,7 @@ class ReporteCiudadanoOut(BaseModel):
     posible_duplicado_de_id: Optional[int]
     creado_en: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @model_validator(mode="after")
     def _ocultar_remitente(self):
@@ -83,8 +81,7 @@ class SolicitudOut(BaseModel):
     estado: EstadoSolicitud
     creado_en: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class NecesidadesCentro(BaseModel):
@@ -114,8 +111,7 @@ class EnvioOut(BaseModel):
     creado_en: datetime
     actualizado_en: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EnvioEstadoUpdate(BaseModel):
@@ -140,8 +136,7 @@ class ColectivoOut(BaseModel):
     verificado: bool
     creado_en: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EventoSismicoOut(BaseModel):
@@ -156,8 +151,7 @@ class EventoSismicoOut(BaseModel):
     timestamp: datetime
     activo_modo_emergencia: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AlertaSismica(BaseModel):

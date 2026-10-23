@@ -14,7 +14,9 @@ Nunca descarta ni fusiona nada automáticamente — solo deja marcado el
 reporte para que un humano decida en la cola de verificación.
 """
 import difflib
-from datetime import datetime, timedelta
+from datetime import timedelta
+
+from .tiempo import ahora_utc
 from typing import Optional
 
 from sqlalchemy.orm import Session
@@ -34,7 +36,7 @@ def encontrar_posible_duplicado(
     ventana_horas: int = VENTANA_HORAS_DEFECTO,
     umbral_similitud: float = UMBRAL_SIMILITUD_DEFECTO,
 ) -> Optional[models.ReporteCiudadano]:
-    desde = datetime.utcnow() - timedelta(hours=ventana_horas)
+    desde = ahora_utc() - timedelta(hours=ventana_horas)
     candidatos = (
         db.query(models.ReporteCiudadano)
         .filter(

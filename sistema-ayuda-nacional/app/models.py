@@ -1,5 +1,5 @@
 import enum
-from datetime import datetime
+from .tiempo import ahora_utc
 
 from sqlalchemy import (
     Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text,
@@ -81,7 +81,7 @@ class CentroLocal(Base):
     lat = Column(Float, nullable=True)
     lon = Column(Float, nullable=True)
 
-    creado_en = Column(DateTime, default=datetime.utcnow)
+    creado_en = Column(DateTime, default=ahora_utc)
 
     solicitudes = relationship("Solicitud", back_populates="centro")
     reportes = relationship("ReporteCiudadano", back_populates="centro")
@@ -113,7 +113,7 @@ class ReporteCiudadano(Base):
     # descarta automáticamente, solo se deja marcado para revisión humana.
     posible_duplicado_de_id = Column(Integer, ForeignKey("reportes_ciudadanos.id"), nullable=True)
 
-    creado_en = Column(DateTime, default=datetime.utcnow)
+    creado_en = Column(DateTime, default=ahora_utc)
 
 
 class Solicitud(Base):
@@ -130,8 +130,8 @@ class Solicitud(Base):
     categoria = Column(Enum(CategoriaNecesidad), nullable=False, index=True)
     estado = Column(Enum(EstadoSolicitud), default=EstadoSolicitud.pendiente, index=True)
 
-    creado_en = Column(DateTime, default=datetime.utcnow)
-    actualizado_en = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    creado_en = Column(DateTime, default=ahora_utc)
+    actualizado_en = Column(DateTime, default=ahora_utc, onupdate=ahora_utc)
 
 
 class EventoSismico(Base):
@@ -147,7 +147,7 @@ class EventoSismico(Base):
     fuente = Column(String(30), default="usgs")
     timestamp = Column(DateTime, nullable=False)
     activo_modo_emergencia = Column(Boolean, default=False)
-    creado_en = Column(DateTime, default=datetime.utcnow)
+    creado_en = Column(DateTime, default=ahora_utc)
 
 
 class Envio(Base):
@@ -176,8 +176,8 @@ class Envio(Base):
     estado = Column(Enum(EstadoEnvio), default=EstadoEnvio.comprometido, index=True)
     verificado = Column(Boolean, default=False)
 
-    creado_en = Column(DateTime, default=datetime.utcnow)
-    actualizado_en = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    creado_en = Column(DateTime, default=ahora_utc)
+    actualizado_en = Column(DateTime, default=ahora_utc, onupdate=ahora_utc)
 
 
 class Colectivo(Base):
@@ -200,7 +200,7 @@ class Colectivo(Base):
 
     verificado = Column(Boolean, default=False)
 
-    creado_en = Column(DateTime, default=datetime.utcnow)
+    creado_en = Column(DateTime, default=ahora_utc)
 
 
 class NodoCredencial(Base):
@@ -210,4 +210,4 @@ class NodoCredencial(Base):
     centro_id = Column(Integer, ForeignKey("centros_locales.id"), nullable=False, unique=True)
     centro = relationship("CentroLocal")
     secreto_hash = Column(String(200), nullable=False)
-    creado_en = Column(DateTime, default=datetime.utcnow)
+    creado_en = Column(DateTime, default=ahora_utc)

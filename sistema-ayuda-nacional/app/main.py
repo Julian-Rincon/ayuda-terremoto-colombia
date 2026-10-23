@@ -1,7 +1,8 @@
 import asyncio
 import os
 import time
-from datetime import datetime, timedelta
+from contextlib import asynccontextmanager
+from datetime import timedelta
 from typing import List, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
@@ -21,6 +22,7 @@ from .hxl_export import generar_sitrep_hxl
 from .integrations import usgs, whatsapp
 from .integrations.ushahidi import sincronizar_ushahidi
 from .rate_limit import limiter
+from .tiempo import ahora_utc
 from .websocket_manager import manager
 
 verificar_secretos_de_produccion()
@@ -36,7 +38,30 @@ ALERTA_SEGURIDAD = (
     "voluntario, damnificado o para un subsidio."
 )
 
+_tarea_usgs: Optional[asyncio.Task] = None
+_INICIADO_EN = time.time()
+
+
+@asynccontextmanager
+async def ciclo_de_vida(_app: FastAPI):
+    """
+    Arranque y apagado del servicio. Reemplaza a @app.on_event, deprecado en
+    FastAPI: con un solo bloque queda a la vista que la tarea que se lanza al
+    arrancar es exactamente la que se cancela al apagar.
+    """
+    global _tarea_usgs
+    db = next(get_db())
+    seed_data.sembrar_datos_iniciales(db)
+    _tarea_usgs = asyncio.create_task(usgs.escuchar_usgs_loop())
+
+    yield
+
+    if _tarea_usgs:
+        _tarea_usgs.cancel()
+
+
 app = FastAPI(
+    lifespan=ciclo_de_vida,
     title="Sistema de Ayuda Nacional — Nodo Central",
     description="Coordinación de reportes ciudadanos y centros territoriales. Terremoto Colombia, agosto 2026. No maneja pagos.",
     version="0.1.0",
@@ -52,24 +77,6 @@ app.add_middleware(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
-
-_tarea_usgs: Optional[asyncio.Task] = None
-_INICIADO_EN = time.time()
-
-
-@app.on_event("startup")
-def startup():
-    db = next(get_db())
-    seed_data.sembrar_datos_iniciales(db)
-    global _tarea_usgs
-    _tarea_usgs = asyncio.create_task(usgs.escuchar_usgs_loop())
-
-
-@app.on_event("shutdown")
-async def shutdown():
-    if _tarea_usgs:
-        _tarea_usgs.cancel()
-
 
 @app.get("/")
 def root():
@@ -140,7 +147,7 @@ async def activar_centro_manualmente(centro_id: int, db: Session = Depends(get_d
     centro de esa zona sin esperar a que el sistema lo detecte solo. Nunca
     inventa ni verifica contacto — activar solo abre el espacio.
     """
-    centro = db.query(models.CentroLocal).get(centro_id)
+    centro = db.get(models.CentroLocal, centro_id)
     if not centro:
         raise HTTPException(404, "Centro no encontrado")
     if not centro.activo:
@@ -157,7 +164,7 @@ async def activar_centro_manualmente(centro_id: int, db: Session = Depends(get_d
 
 @app.get("/api/v1/centros/{centro_id}/necesidades", response_model=schemas.NecesidadesCentro)
 def necesidades_centro(centro_id: int, db: Session = Depends(get_db)):
-    centro = db.query(models.CentroLocal).get(centro_id)
+    centro = db.get(models.CentroLocal, centro_id)
     if not centro:
         raise HTTPException(404, "Centro no encontrado")
 
@@ -198,7 +205,7 @@ def resumen_necesidades_ia(centro_id: int, db: Session = Depends(get_db)):
     con fallback por plantilla). Solo reformula los conteos ya calculados —
     nunca inventa solicitudes, personas ni ubicaciones nuevas.
     """
-    centro = db.query(models.CentroLocal).get(centro_id)
+    centro = db.get(models.CentroLocal, centro_id)
     if not centro:
         raise HTTPException(404, "Centro no encontrado")
 
@@ -334,11 +341,11 @@ def listar_reportes(
 
 @app.post("/api/v1/reportes/{reporte_id}/verificar", response_model=schemas.ReporteCiudadanoOut)
 async def verificar_reporte(reporte_id: int, payload: schemas.ReporteVerificar, db: Session = Depends(get_db)):
-    reporte = db.query(models.ReporteCiudadano).get(reporte_id)
+    reporte = db.get(models.ReporteCiudadano, reporte_id)
     if not reporte:
         raise HTTPException(404, "Reporte no encontrado")
 
-    centro = db.query(models.CentroLocal).get(payload.centro_id)
+    centro = db.get(models.CentroLocal, payload.centro_id)
     if not centro:
         raise HTTPException(404, "Centro no encontrado")
 
@@ -434,7 +441,7 @@ async def crear_envio(request: Request, payload: schemas.EnvioCreate, db: Sessio
     riesgo de spam automatizado, así que lleva el mismo límite de 10/minuto
     por IP.
     """
-    centro = db.query(models.CentroLocal).get(payload.centro_id)
+    centro = db.get(models.CentroLocal, payload.centro_id)
     if not centro:
         raise HTTPException(404, "Centro no encontrado")
 
@@ -478,7 +485,7 @@ async def verificar_envio(envio_id: int, db: Session = Depends(get_db)):
     Gate de confianza: un envío NUNCA cuenta como cobertura de una necesidad
     hasta que un humano coordinador lo confirme explícitamente por acá.
     """
-    envio = db.query(models.Envio).get(envio_id)
+    envio = db.get(models.Envio, envio_id)
     if not envio:
         raise HTTPException(404, "Envío no encontrado")
     envio.verificado = True
@@ -490,7 +497,7 @@ async def verificar_envio(envio_id: int, db: Session = Depends(get_db)):
 
 @app.patch("/api/v1/envios/{envio_id}/estado", response_model=schemas.EnvioOut)
 async def actualizar_estado_envio(envio_id: int, payload: schemas.EnvioEstadoUpdate, db: Session = Depends(get_db)):
-    envio = db.query(models.Envio).get(envio_id)
+    envio = db.get(models.Envio, envio_id)
     if not envio:
         raise HTTPException(404, "Envío no encontrado")
     envio.estado = payload.estado
@@ -536,7 +543,7 @@ def listar_colectivos(
 
 @app.patch("/api/v1/colectivos/{colectivo_id}/verificar", response_model=schemas.ColectivoOut)
 async def verificar_colectivo(colectivo_id: int, db: Session = Depends(get_db)):
-    colectivo = db.query(models.Colectivo).get(colectivo_id)
+    colectivo = db.get(models.Colectivo, colectivo_id)
     if not colectivo:
         raise HTTPException(404, "Colectivo no encontrado")
     colectivo.verificado = True
@@ -608,7 +615,7 @@ def ultimo_evento_sismico(db: Session = Depends(get_db)):
 @app.get("/api/v1/eventos-sismicos", response_model=List[schemas.EventoSismicoOut])
 def listar_eventos_sismicos(dias: int = 7, db: Session = Depends(get_db)):
     """Historial reciente — no solo el último, para ver la secuencia de réplicas."""
-    desde = datetime.utcnow() - timedelta(days=dias)
+    desde = ahora_utc() - timedelta(days=dias)
     return (
         db.query(models.EventoSismico)
         .filter(models.EventoSismico.timestamp >= desde)
@@ -624,7 +631,7 @@ def alerta_sismica(dias: int = 7, db: Session = Depends(get_db)):
     fallback por plantilla). Nunca inventa datos de daños o seguridad — solo
     reformula los eventos reales que ya tenemos registrados.
     """
-    desde = datetime.utcnow() - timedelta(days=dias)
+    desde = ahora_utc() - timedelta(days=dias)
     eventos = (
         db.query(models.EventoSismico)
         .filter(models.EventoSismico.timestamp >= desde)

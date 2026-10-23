@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import sessionmaker
 
+from app.tiempo import ahora_utc
 from app import ai_helper
 from app import seed_data as seed_data_module
 from app.database import Base, get_db
@@ -393,7 +394,7 @@ def _sembrar_evento_sismico(client, id_externo, magnitud, lugar, hace_horas=1):
         lon=-76.3,
         lugar=lugar,
         fuente="usgs",
-        timestamp=datetime.utcnow() - timedelta(hours=hace_horas),
+        timestamp=ahora_utc() - timedelta(hours=hace_horas),
         activo_modo_emergencia=magnitud >= 6.0,
     )
     db.add(evento)
