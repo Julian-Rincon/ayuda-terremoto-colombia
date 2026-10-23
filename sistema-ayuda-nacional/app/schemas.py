@@ -171,4 +171,17 @@ class LoginRequest(BaseModel):
 
 class TokenOut(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
+    expires_in: int
+
+
+class RefrescoRequest(BaseModel):
+    refresh_token: str
+
+
+class EstadoSalud(BaseModel):
+    estado: str
+    base_de_datos: str
+    version: str
+    segundos_activo: int

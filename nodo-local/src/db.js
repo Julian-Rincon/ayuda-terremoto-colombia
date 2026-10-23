@@ -25,9 +25,9 @@ function getDb() {
 
 // ---------- Sesión (JWT del centro autenticado) ----------
 
-export async function guardarSesion({ centroId, idTerritorio, token }) {
+export async function guardarSesion({ centroId, idTerritorio, token, refreshToken }) {
   const db = await getDb()
-  await db.put('auth', { centroId, idTerritorio, token }, 'sesion')
+  await db.put('auth', { centroId, idTerritorio, token, refreshToken }, 'sesion')
 }
 
 export async function obtenerSesion() {

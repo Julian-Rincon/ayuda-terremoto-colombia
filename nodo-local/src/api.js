@@ -10,7 +10,9 @@ async function solicitar(ruta, opciones = {}) {
   })
   if (!resp.ok) {
     const cuerpo = await resp.text().catch(() => '')
-    throw new Error(`${resp.status} ${resp.statusText}: ${cuerpo}`)
+    const error = new Error(`${resp.status} ${resp.statusText}: ${cuerpo}`)
+    error.status = resp.status // quien llama distingue "credenciales muertas" de "se cayó la red"
+    throw error
   }
   return resp.json()
 }
@@ -27,6 +29,13 @@ export function login(idTerritorio, secreto) {
   return solicitar('/api/v1/auth/token', {
     method: 'POST',
     body: JSON.stringify({ id_territorio: idTerritorio, secreto }),
+  })
+}
+
+export function refrescarToken(refreshToken) {
+  return solicitar('/api/v1/auth/refrescar', {
+    method: 'POST',
+    body: JSON.stringify({ refresh_token: refreshToken }),
   })
 }
 

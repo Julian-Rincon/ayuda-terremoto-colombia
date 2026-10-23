@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import * as db from './db.js'
 import { sincronizarPendientes } from './sync.js'
+import { asegurarSesionVigente } from './sesion.js'
 import { useOnlineStatus } from './hooks/useOnlineStatus.js'
 import NavPublica from './components/NavPublica.jsx'
 import Inicio from './components/Inicio.jsx'
@@ -11,6 +12,8 @@ import Login from './components/Login.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import ActualizacionApp from './components/ActualizacionApp.jsx'
 import './App.css'
+
+const INTERVALO_RENOVACION_MS = 30 * 60 * 1000
 
 export default function App() {
   const [sesion, setSesion] = useState(undefined) // undefined = cargando, null = sin sesión
@@ -36,6 +39,32 @@ export default function App() {
   useEffect(() => {
     if (enLinea) sincronizar()
   }, [enLinea, sincronizar])
+
+  // Renovación automática del JWT: al recuperar conexión y cada 30 minutos
+  // mientras la pestaña siga abierta. Un turno de coordinación dura más que el
+  // token de acceso, y nadie debería quedar fuera a mitad de una entrega.
+  const haySesion = Boolean(sesion)
+  useEffect(() => {
+    if (!haySesion || !enLinea) return undefined
+
+    let cancelado = false
+    async function renovar() {
+      const vigente = await asegurarSesionVigente()
+      if (cancelado) return
+      // Conservar el objeto anterior cuando el token no cambió: así este
+      // efecto no se reinicia a sí mismo en cada renovación.
+      setSesion((anterior) =>
+        vigente && anterior && vigente.token === anterior.token ? anterior : vigente,
+      )
+    }
+
+    renovar()
+    const intervalo = setInterval(renovar, INTERVALO_RENOVACION_MS)
+    return () => {
+      cancelado = true
+      clearInterval(intervalo)
+    }
+  }, [haySesion, enLinea])
 
   async function handleLogout() {
     await db.borrarSesion()

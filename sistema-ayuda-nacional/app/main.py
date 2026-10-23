@@ -1,4 +1,5 @@
 import asyncio
+import time
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -8,6 +9,7 @@ from fastapi.responses import PlainTextResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from . import auth, dedup, models, pipeline, schemas, seed_data
@@ -50,6 +52,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 _tarea_usgs: Optional[asyncio.Task] = None
+_INICIADO_EN = time.time()
 
 
 @app.on_event("startup")
@@ -73,6 +76,30 @@ def root():
         "alcance": "Terremoto Colombia, 10 de agosto de 2026 — coordinación nacional",
         "alerta_seguridad": ALERTA_SEGURIDAD,
     }
+
+
+@app.get("/salud", response_model=schemas.EstadoSalud)
+def salud(db: Session = Depends(get_db)):
+    """
+    Chequeo para monitoreo externo (UptimeRobot, Better Stack, el health check
+    de Render). Toca la base real: si la consulta falla responde 503, que es lo
+    que un monitor necesita para avisar en vez de ver un 200 vacío.
+    """
+    try:
+        db.execute(text("SELECT 1"))
+        base_ok = True
+    except Exception:
+        base_ok = False
+
+    estado = schemas.EstadoSalud(
+        estado="ok" if base_ok else "degradado",
+        base_de_datos="ok" if base_ok else "sin conexión",
+        version=app.version,
+        segundos_activo=int(time.time() - _INICIADO_EN),
+    )
+    if not base_ok:
+        raise HTTPException(503, estado.model_dump())
+    return estado
 
 
 # ---------------------------------------------------------------------------
@@ -214,8 +241,31 @@ def login(payload: schemas.LoginRequest, db: Session = Depends(get_db)):
     if not credencial or not auth.verificar_secreto(payload.secreto, credencial.secreto_hash):
         raise HTTPException(401, "Credenciales inválidas")
 
-    token = auth.generar_token(centro.id, centro.id_territorio)
-    return schemas.TokenOut(access_token=token)
+    return _emitir_tokens(centro)
+
+
+@app.post("/api/v1/auth/refrescar", response_model=schemas.TokenOut)
+def refrescar_token(payload: schemas.RefrescoRequest, db: Session = Depends(get_db)):
+    """
+    Cambia un token de refresco vigente por un par nuevo (acceso + refresco).
+    Rota el refresco en cada uso: el anterior deja de ser el vigente en el
+    cliente, así una copia filtrada envejece junto con la sesión real.
+    """
+    datos = auth.decodificar_token(payload.refresh_token, tipo_esperado=auth.TIPO_REFRESCO)
+
+    centro = db.get(models.CentroLocal, datos["centro_id"])
+    if not centro:
+        raise HTTPException(401, "El centro de este token ya no existe")
+
+    return _emitir_tokens(centro)
+
+
+def _emitir_tokens(centro: models.CentroLocal) -> schemas.TokenOut:
+    return schemas.TokenOut(
+        access_token=auth.generar_token(centro.id, centro.id_territorio),
+        refresh_token=auth.generar_token_refresco(centro.id, centro.id_territorio),
+        expires_in=auth.JWT_EXPIRA_SEGUNDOS,
+    )
 
 
 # ---------------------------------------------------------------------------

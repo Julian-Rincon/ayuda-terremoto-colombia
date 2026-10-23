@@ -1,5 +1,6 @@
 import * as api from './api.js'
 import * as db from './db.js'
+import { asegurarSesionVigente } from './sesion.js'
 
 /**
  * Intenta sincronizar todas las acciones pendientes en la cola (reportes y
@@ -16,7 +17,9 @@ export async function sincronizarPendientes() {
     return { sincronizados, fallidos }
   }
 
-  const sesion = await db.obtenerSesion()
+  // Una cola que estuvo días offline puede traer un token ya vencido: se
+  // renueva una vez antes de drenarla, no una vez por acción.
+  const sesion = await asegurarSesionVigente()
 
   for (const accion of pendientes) {
     try {

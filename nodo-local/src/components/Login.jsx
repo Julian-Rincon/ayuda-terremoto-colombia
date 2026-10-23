@@ -89,14 +89,14 @@ export default function Login({ onLogin }) {
     setCargando(true)
     setError(null)
     try {
-      const { access_token: token } = await api.login(idTerritorio, secreto)
+      const { access_token: token, refresh_token: refreshToken } = await api.login(idTerritorio, secreto)
       const centros = await api.listarCentros()
       const centro = centros.find((c) => c.id_territorio === idTerritorio)
       if (!centro) {
         throw new Error('No se encontró el centro para este id de territorio')
       }
 
-      const sesion = { centroId: centro.id, idTerritorio, token }
+      const sesion = { centroId: centro.id, idTerritorio, token, refreshToken }
       await db.guardarSesion(sesion)
       onLogin(sesion)
     } catch {

@@ -462,3 +462,53 @@ def test_resumen_necesidades_ia_con_pendientes(client):
     assert resp.status_code == 200
     assert "agua" in data["resumen"]
     assert data["generado_por_ia"] is False
+
+
+def test_login_entrega_par_de_tokens_y_refrescar_renueva_el_acceso(client):
+    login = client.post("/api/v1/auth/token", json={
+        "id_territorio": "risaralda-pereira", "secreto": "cambia-esto-en-produccion",
+    })
+    assert login.status_code == 200
+    datos = login.json()
+    assert datos["refresh_token"]
+    assert datos["expires_in"] > 0
+
+    renovado = client.post("/api/v1/auth/refrescar", json={"refresh_token": datos["refresh_token"]})
+    assert renovado.status_code == 200
+    nuevo = renovado.json()
+
+    # El acceso renovado sirve de verdad contra un endpoint protegido: se crea
+    # una solicitud pendiente de agua y se marca entregada con el token nuevo.
+    centros = client.get("/api/v1/centros").json()
+    centro = next(c for c in centros if c["id_territorio"] == "risaralda-pereira")
+    reporte = client.post("/api/v1/reportes", json={"contenido": "Sin agua potable urgente"}).json()
+    client.post(f"/api/v1/reportes/{reporte['id']}/verificar", json={"centro_id": centro["id"]})
+
+    entrega = client.post(
+        f"/api/v1/centros/{centro['id']}/entregas",
+        json={"categoria": "agua"},
+        headers={"Authorization": f"Bearer {nuevo['access_token']}"},
+    )
+    assert entrega.status_code == 200
+
+
+def test_refrescar_con_token_invalido_responde_401(client):
+    resp = client.post("/api/v1/auth/refrescar", json={"refresh_token": "no-es-un-jwt"})
+    assert resp.status_code == 401
+
+
+def test_refrescar_con_token_de_acceso_responde_401(client):
+    login = client.post("/api/v1/auth/token", json={
+        "id_territorio": "risaralda-pereira", "secreto": "cambia-esto-en-produccion",
+    }).json()
+    resp = client.post("/api/v1/auth/refrescar", json={"refresh_token": login["access_token"]})
+    assert resp.status_code == 401
+
+
+def test_salud_reporta_ok_con_base_viva(client):
+    resp = client.get("/salud")
+    assert resp.status_code == 200
+    datos = resp.json()
+    assert datos["estado"] == "ok"
+    assert datos["base_de_datos"] == "ok"
+    assert datos["segundos_activo"] >= 0
