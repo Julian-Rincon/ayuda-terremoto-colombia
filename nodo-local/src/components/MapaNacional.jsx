@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet'
+import { CircleMarker, LayersControl, MapContainer, Popup, TileLayer, WMSTileLayer } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import * as api from '../api.js'
 import ListaMapaAccesible from './ListaMapaAccesible.jsx'
+import { CAPAS_WMS, WMS_URL } from '../capasWms.js'
 
 const CENTRO_COLOMBIA = [4.5, -74.3]
 
@@ -142,6 +143,27 @@ export default function MapaNacional() {
                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               />
+
+              {/* Capas WMS servidas por GeoServer sobre PostGIS, cuando hay un
+                  despliegue geoespacial detrás (ver sistema-ayuda-nacional/docs/
+                  geoserver-postgis.md). Sin VITE_WMS_URL el mapa queda idéntico
+                  a como estaba: el nodo local nunca depende de GeoServer. */}
+              {CAPAS_WMS.length > 0 && (
+                <LayersControl position="topright">
+                  {CAPAS_WMS.map((capa) => (
+                    <LayersControl.Overlay key={capa.nombre} name={capa.etiqueta} checked={capa.visible}>
+                      <WMSTileLayer
+                        url={WMS_URL}
+                        layers={capa.nombre}
+                        format="image/png"
+                        transparent
+                        opacity={0.7}
+                        attribution="Capas WMS — GeoServer / PostGIS"
+                      />
+                    </LayersControl.Overlay>
+                  ))}
+                </LayersControl>
+              )}
 
               {centros.map((c) => (
                 <CircleMarker
