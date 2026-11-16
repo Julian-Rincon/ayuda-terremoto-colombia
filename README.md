@@ -127,6 +127,38 @@ Las capas geoespaciales WMS/WFS, que antes estaban en esta lista, ya están
 implementadas: ver
 [la guía de GeoServer + PostGIS](sistema-ayuda-nacional/docs/geoserver-postgis.md).
 
+## How it's measured
+
+Cada cifra que se cita de este proyecto se puede volver a medir con un
+comando. Medido el 2026-11-16 en Python 3.14 y Node 22+, con las
+dependencias de `requirements.txt` y `package-lock.json` de este commit.
+
+| Métrica | Valor | Comando (desde la raíz del repo) | Medido |
+|---|---|---|---|
+| Pruebas del backend (pytest) | 129 pasan, 0 fallan | `cd sistema-ayuda-nacional && python -m pytest -q` | 2026-11-16 |
+| Advertencias de la suite, hoy | 4 (3 de `slowapi` y 1 de `starlette`, ambas dependencias externas) | mismo comando; se lee en la línea final (`129 passed, 4 warnings`) | 2026-11-16 |
+| Advertencias antes de sacar las APIs deprecadas | 3.985 (medido entonces); 4.003 al repetirlo hoy con las dependencias actuales | `git worktree add /tmp/antes aba64d1~1 && cd /tmp/antes/sistema-ayuda-nacional && python -m pytest -q` | 2026-11-16 |
+| Vulnerabilidades en el backend | 0 | `pip-audit -r sistema-ayuda-nacional/requirements.txt` | 2026-11-16 |
+| Vulnerabilidades en el frontend (producción) | 0 | `cd nodo-local && npm ci && npm audit --omit=dev` | 2026-11-16 |
+| Auditoría automática | semanal, lunes 12:00 UTC, aparte de CI | [`.github/workflows/auditoria-dependencias.yml`](.github/workflows/auditoria-dependencias.yml) | 2026-11-16 |
+| Carga: 50 usuarios virtuales (lectura normal) y estrés de 30 a 150 | 0 errores con 50; quiebre entre 100 y 150 | método y resultados en [`pruebas-carga.md`](sistema-ayuda-nacional/docs/pruebas-carga.md) | medido antes; no repetido el 2026-11-16 |
+
+**Criterios.**
+
+- Una prueba cuenta solo si **pasa**: las 129 son las que `pytest` reporta
+  como `passed`, no las recogidas. Hoy coinciden (0 falladas, 0 omitidas).
+- Las advertencias son las del resumen final de `pytest`, con el
+  `pytest.ini` del repo, que silencia solo la de longitud del secreto JWT de
+  las pruebas (explicada ahí mismo). El número depende de las versiones
+  instaladas: por eso se anota la fecha.
+- `npm audit` sin `--omit=dev` sí reporta hallazgos moderados en
+  herramientas de desarrollo (`vite-plugin-pwa` → `workbox-build` →
+  `deepmerge`/`glob`); no llegan al navegador. Por eso la cifra «0» es la de
+  producción, igual que en el workflow semanal.
+- **Límite:** el script de Locust de las pruebas de carga no está versionado
+  en el repositorio; `pruebas-carga.md` documenta escenarios, concurrencias y
+  resultados, pero esas cifras no se reproducen con un solo comando.
+
 ## Guías
 
 | Guía | Para qué |
